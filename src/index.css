@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Định nghĩa lại theme từ file tailwind.config.js cũ */
+@theme {
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "sans-serif";
+  --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
