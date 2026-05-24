@@ -1,17 +1,27 @@
 import Logo from "./Logo";
-import { navItems } from "../data/dashboardData";
+import { adminNavItems, hospitalAdminNavItems } from "../data/dashboardData";
 import Navbar from "./Navbar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Sidebar() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout(); //del token và user info
     navigate("/"); // to login
   };
+
+  const normalizedRole = (
+    user?.role ||
+    user?.userRole ||
+    user?.user_role ||
+    user?.roles?.[0] ||
+    "patient"
+  ).toLowerCase();
+
+  const navItems = normalizedRole === "admin_hospital" ? hospitalAdminNavItems : adminNavItems;
 
   return (
     <aside className="fixed bottom-0 left-0 top-0 z-50 flex w-[280px] flex-col overflow-hidden border-r border-[#e6e9f4] bg-white py-[35px] shadow-[5px_0_20px_rgba(0,0,0,0.03)] max-lg:w-20 max-lg:py-6">

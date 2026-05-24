@@ -20,39 +20,23 @@ import {
   FaRegNewspaper,
 } from "react-icons/fa";
 
-export const navItems = [
+export const adminNavItems = [
   { label: "Dashboard", Icon: FaHome, active: false, url: "/dashboard" },
-  { label: "Patients", Icon: FaUserInjured, active: false, url: "/patient" },
-  { label: "Doctors", Icon: FaUserMd, active: false, url: "/doctor" },
-  {
-    label: "Banners",
-    Icon: FaRegFileImage,
-    active: false,
-    url: "/banner",
-  },
-  {
-    label: "Hospitals",
-    Icon: FaRegHospital,
-    active: false,
-    url: "/hospital",
-  },
-  {
-    label: "Categories",
-    Icon: FaRegListAlt,
-    active: false,
-    url: "/category",
-  },
-  {
-    label: "Payments",
-    Icon: FaWallet,
-    active: false,
-    url: "/payment",
-  },
+  { label: "Hospitals", Icon: FaRegHospital, active: false, url: "/hospital" },
+  { label: "Categories", Icon: FaRegListAlt, active: false, url: "/category" },
+  { label: "Banners", Icon: FaRegFileImage, active: false, url: "/banner" },
   { label: "News", Icon: FaRegNewspaper, active: false, url: "/news" },
   { label: "Socials", Icon: FaGlobeAmericas, active: false, url: "/social" },
-  // { label: "Inbox", Icon: FaCommentDots },
-  // { label: "Insights", Icon: FaChartLine },
-  // { label: "Help Center", Icon: FaLifeRing },
+  { label: "Payments", Icon: FaWallet, active: false, url: "/payment" },
+  { label: "Users", Icon: FaUserCircle, active: false, url: "/users" },
+];
+
+export const hospitalAdminNavItems = [
+  { label: "Dashboard", Icon: FaHome, active: false, url: "/dashboard" },
+  { label: "Doctors", Icon: FaUserMd, active: false, url: "/doctor" },
+  { label: "Patients", Icon: FaUserInjured, active: false, url: "/patient" },
+  { label: "Schedules", Icon: FaRegListAlt, active: false, url: "/schedules" },
+  { label: "Reviews", Icon: FaCommentDots, active: false, url: "/review" },
 ];
 
 export const transferCards = [

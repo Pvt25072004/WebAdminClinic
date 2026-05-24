@@ -21,6 +21,7 @@ import CategoryManagement from "./pages/CategoryManagement";
 import PaymentManagement from "./pages/PaymentManagement";
 import NewsManagement from "./pages/NewsManagement";
 import SocialManagement from "./pages/SocialManagement";
+import ReviewManagement from "./pages/ReviewManagement";
 import Login from "./pages/Login";
 import {
   BrowserRouter,
@@ -63,8 +64,8 @@ const ProtectedAdminRoute = ({ children }) => {
     "patient"
   ).toLowerCase();
 
-  // Yêu cầu role admin
-  if (normalizedRole !== "admin") {
+  // Yêu cầu role admin hoặc admin_hospital
+  if (!["admin", "admin_hospital"].includes(normalizedRole)) {
     // Nếu không phải admin, ép quay về Login
     return <Navigate to="/" replace />;
   }
@@ -85,13 +86,15 @@ const AppRouter = () => {
 
   const isUserAdmin =
     isAuthenticated &&
-    (
-      user?.role ||
-      user?.userRole ||
-      user?.user_role ||
-      user?.roles?.[0] ||
-      "patient"
-    ).toLowerCase() === "admin";
+    ["admin", "admin_hospital"].includes(
+      (
+        user?.role ||
+        user?.userRole ||
+        user?.user_role ||
+        user?.roles?.[0] ||
+        "patient"
+      ).toLowerCase(),
+    );
 
   return (
     <Routes>
@@ -118,6 +121,7 @@ const AppRouter = () => {
         <Route path="/payment" element={<PaymentManagement />} />
         <Route path="/news" element={<NewsManagement />} />
         <Route path="/social" element={<SocialManagement />} />
+        <Route path="/review" element={<ReviewManagement />} />
       </Route>
 
       {/* Catch all */}

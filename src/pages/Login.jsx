@@ -26,10 +26,10 @@ export default function Login() {
         "patient"
       ).toLowerCase();
 
-      if (normalizedRole === "admin") {
-        navigate("/home");
+      if (["admin", "admin_hospital"].includes(normalizedRole)) {
+        navigate("/dashboard");
       } else {
-        // Nếu đăng nhập thành công nhưng không phải Admin
+        // Nếu đăng nhập thành công nhưng không phải Admin hoặc Admin Hospital
         logout();
         setError("Chỉ tài khoản admin mới có quyền truy cập hệ thống này.");
       }
