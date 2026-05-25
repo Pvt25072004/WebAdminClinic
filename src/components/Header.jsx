@@ -1,6 +1,19 @@
 import { FaBell, FaSearch } from "react-icons/fa";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Header() {
+  const { user } = useAuth();
+
+  const normalizedRole = (
+    user?.role ||
+    user?.userRole ||
+    user?.user_role ||
+    user?.roles?.[0] ||
+    "patient"
+  ).toLowerCase();
+
+  const workspaceTitle = normalizedRole === "admin_hospital" ? "Admin Hospital Workspace" : "Admin Workspace";
+
   return (
     <header className="mb-10 flex items-center justify-between max-md:flex-col max-md:items-start">
       <div>
@@ -8,7 +21,7 @@ export default function Header() {
           Trung tâm điều hành hệ thống
         </p>
         <h1 className="bg-gradient-to-r from-[#262a39] to-[#4270f4] bg-clip-text text-3xl font-bold text-transparent max-md:text-2xl">
-          Admin workspace
+          {workspaceTitle}
         </h1>
       </div>
 
