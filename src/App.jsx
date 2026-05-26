@@ -22,7 +22,10 @@ import PaymentManagement from "./pages/PaymentManagement";
 import NewsManagement from "./pages/NewsManagement";
 import SocialManagement from "./pages/SocialManagement";
 import ReviewManagement from "./pages/ReviewManagement";
+import UserManagement from "./pages/UserManagement";
+import DoctorRequestsManagement from "./pages/DoctorRequestsManagement";
 import Login from "./pages/Login";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import {
   BrowserRouter,
   Routes,
@@ -122,6 +125,8 @@ const AppRouter = () => {
         <Route path="/news" element={<NewsManagement />} />
         <Route path="/social" element={<SocialManagement />} />
         <Route path="/review" element={<ReviewManagement />} />
+        <Route path="/users" element={<UserManagement />} />
+        <Route path="/doctor-requests" element={<DoctorRequestsManagement />} />
       </Route>
 
       {/* Catch all */}
@@ -132,10 +137,12 @@ const AppRouter = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppRouter />
-      </BrowserRouter>
-    </AuthProvider>
+    <NotificationProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRouter />
+        </BrowserRouter>
+      </AuthProvider>
+    </NotificationProvider>
   );
 }

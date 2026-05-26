@@ -59,3 +59,29 @@ export const deleteUserAdmin = async (id) => {
   });
   return handleResponse(response, "Không thể xóa người dùng");
 };
+
+export const createUserAdmin = async (payload) => {
+  const response = await fetch(USERS_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể tạo người dùng");
+};
+
+export const updateUserAdmin = async (id, payload) => {
+  const response = await fetch(`${USERS_ENDPOINT}/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể cập nhật người dùng");
+};

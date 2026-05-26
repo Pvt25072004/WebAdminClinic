@@ -30,7 +30,10 @@ import {
   updateCategory,
   deleteCategory,
 } from "../services/admin.categories.api";
+import { useNotification } from "../contexts/NotificationContext";
+
 export default function HospitalManagement() {
+  const { showSuccess, showError, confirm } = useNotification();
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -76,23 +79,32 @@ export default function HospitalManagement() {
     try {
       if (editingCategory) {
         await updateCategory(editingCategory.id, { name: categoryForm.name });
+        showSuccess("Cập nhật chuyên khoa thành công");
       } else {
         await createCategory({ name: categoryForm.name });
+        showSuccess("Tạo chuyên khoa thành công");
       }
       resetCategoryForm();
       void loadCategories();
     } catch (e) {
-      alert(e.message || "Không thể lưu chuyên khoa");
+      showError(e.message || "Không thể lưu chuyên khoa");
     }
   };
 
   const handleDeleteCategory = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa chuyên khoa này?")) return;
+    const isConfirm = await confirm(
+      "Xác nhận xóa",
+      "Bạn có chắc muốn xóa chuyên khoa này?",
+      { variant: "danger", confirmText: "Xóa" }
+    );
+    if (!isConfirm) return;
+    
     try {
       await deleteCategory(id);
+      showSuccess("Đã xóa chuyên khoa");
       void loadCategories();
     } catch (e) {
-      alert(e.message || "Không thể xóa chuyên khoa");
+      showError(e.message || "Không thể xóa chuyên khoa");
     }
   };
   const loadHospitals = async () => {
@@ -131,22 +143,31 @@ export default function HospitalManagement() {
 
       if (editingHospital) {
         await updateHospital(editingHospital.id, payload);
+        showSuccess("Cập nhật bệnh viện thành công");
       } else {
         await createHospital(payload);
+        showSuccess("Tạo bệnh viện thành công");
       }
       resetForm();
       void loadHospitals();
     } catch (err) {
-      alert(err.message || "Không thể lưu bệnh viện");
+      showError(err.message || "Không thể lưu bệnh viện");
     }
   };
   const handleDeleteHospital = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa bệnh viện này?")) return;
+    const isConfirm = await confirm(
+      "Xác nhận xóa",
+      "Bạn có chắc muốn xóa bệnh viện này?",
+      { variant: "danger", confirmText: "Xóa" }
+    );
+    if (!isConfirm) return;
+    
     try {
       await deleteHospital(id);
+      showSuccess("Đã xóa bệnh viện");
       void loadHospitals();
     } catch (e) {
-      alert(e.message || "Không thể xóa bệnh viện");
+      showError(e.message || "Không thể xóa bệnh viện");
     }
   };
   const resetForm = () => {

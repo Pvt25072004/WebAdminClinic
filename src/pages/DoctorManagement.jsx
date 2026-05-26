@@ -8,7 +8,10 @@ import {
   deleteDoctor,
 } from "../services/admin.doctors.api";
 import { getCategories } from "../services/admin.categories.api";
+import { useNotification } from "../contexts/NotificationContext";
+
 export default function DoctorManagement() {
+  const { showSuccess, showError, confirm } = useNotification();
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [doctors, setDoctors] = useState([]);
@@ -47,19 +50,27 @@ export default function DoctorManagement() {
   const handleToggleDoctor = async (doctor) => {
     try {
       await toggleDoctorActive(doctor.id);
+      showSuccess(`Đã ${doctor.is_active ? "tạm khóa" : "mở khóa"} tài khoản bác sĩ`);
       void loadDoctors();
     } catch (e) {
-      alert(e.message || "Không thể cập nhật trạng thái bác sĩ");
+      showError(e.message || "Không thể cập nhật trạng thái bác sĩ");
     }
   };
 
   const handleDeleteDoctor = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa bác sĩ này?")) return;
+    const isConfirm = await confirm(
+      "Xác nhận xóa",
+      "Bạn có chắc muốn xóa bác sĩ này?",
+      { variant: "danger", confirmText: "Xóa" }
+    );
+    if (!isConfirm) return;
+
     try {
       await deleteDoctor(id);
+      showSuccess("Đã xóa tài khoản bác sĩ");
       void loadDoctors();
     } catch (e) {
-      alert(e.message || "Không thể xóa bác sĩ");
+      showError(e.message || "Không thể xóa bác sĩ");
     }
   };
 
@@ -81,9 +92,10 @@ export default function DoctorManagement() {
         description: "",
         category_id: "",
       });
+      showSuccess("Tạo tài khoản bác sĩ thành công");
       void loadDoctors();
     } catch (e) {
-      alert(e.message || "Không thể tạo bác sĩ");
+      showError(e.message || "Không thể tạo bác sĩ");
     }
   };
   useEffect(() => {

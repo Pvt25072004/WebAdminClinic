@@ -37,6 +37,7 @@ export const hospitalAdminNavItems = [
   { label: "Patients", Icon: FaUserInjured, active: false, url: "/patient" },
   { label: "Schedules", Icon: FaRegListAlt, active: false, url: "/schedules" },
   { label: "Reviews", Icon: FaCommentDots, active: false, url: "/review" },
+  { label: "Requests", Icon: FaRegFileImage, active: false, url: "/doctor-requests" },
 ];
 
 export const transferCards = [

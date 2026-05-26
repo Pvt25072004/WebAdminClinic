@@ -7,7 +7,10 @@ import {
   deleteCategory,
 } from "../services/admin.categories.api";
 import { Edit3, Trash2 } from "lucide-react";
+import { useNotification } from "../contexts/NotificationContext";
+
 export default function CategoryManagement() {
+  const { showSuccess, showError, confirm } = useNotification();
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -40,23 +43,32 @@ export default function CategoryManagement() {
     try {
       if (editingCategory) {
         await updateCategory(editingCategory.id, { name: categoryForm.name });
+        showSuccess("Cập nhật chuyên khoa thành công");
       } else {
         await createCategory({ name: categoryForm.name });
+        showSuccess("Tạo chuyên khoa thành công");
       }
       resetCategoryForm();
       void loadCategories();
     } catch (e) {
-      alert(e.message || "Không thể lưu chuyên khoa");
+      showError(e.message || "Không thể lưu chuyên khoa");
     }
   };
 
   const handleDeleteCategory = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa chuyên khoa này?")) return;
+    const isConfirm = await confirm(
+      "Xác nhận xóa",
+      "Bạn có chắc muốn xóa chuyên khoa này?",
+      { variant: "danger", confirmText: "Xóa" }
+    );
+    if (!isConfirm) return;
+    
     try {
       await deleteCategory(id);
+      showSuccess("Đã xóa chuyên khoa");
       void loadCategories();
     } catch (e) {
-      alert(e.message || "Không thể xóa chuyên khoa");
+      showError(e.message || "Không thể xóa chuyên khoa");
     }
   };
   useEffect(() => {

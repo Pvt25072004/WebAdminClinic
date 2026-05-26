@@ -21,14 +21,16 @@ const initialForm = {
   doctor_id: "",
 };
 
+import { useNotification } from "../contexts/NotificationContext";
+
 export default function BannerManagement() {
+  const { showSuccess, showError, confirm } = useNotification();
   const [banners, setBanners] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
   const loadBanners = async () => {
     try {
@@ -36,7 +38,7 @@ export default function BannerManagement() {
       const data = await getHospitalBanners();
       setBanners(data || []);
     } catch (error) {
-      setMessage(error.message);
+      showError(error.message || "Lỗi tải banner");
     } finally {
       setLoading(false);
     }
@@ -108,10 +110,10 @@ export default function BannerManagement() {
 
       if (editingId) {
         await updateHospitalBanner(editingId, payload);
-        setMessage("Cập nhật banner thành công");
+        showSuccess("Cập nhật banner thành công");
       } else {
         await createHospitalBanner(payload);
-        setMessage("Tạo banner thành công");
+        showSuccess("Tạo banner thành công");
       }
 
       setForm(initialForm);
@@ -120,7 +122,7 @@ export default function BannerManagement() {
       setPreviewUrl("");
       await loadBanners();
     } catch (error) {
-      setMessage(error.message);
+      showError(error.message);
     } finally {
       setLoading(false);
     }
@@ -148,17 +150,21 @@ export default function BannerManagement() {
   };
 
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Bạn có chắc muốn xóa banner này?");
+    const isConfirm = await confirm(
+      "Xác nhận xóa",
+      "Bạn có chắc muốn xóa banner này?",
+      { variant: "danger", confirmText: "Xóa" }
+    );
 
-    if (!confirmDelete) return;
+    if (!isConfirm) return;
 
     try {
       setLoading(true);
       await deleteHospitalBanner(id);
-      setMessage("Xóa banner thành công");
+      showSuccess("Xóa banner thành công");
       await loadBanners();
     } catch (error) {
-      setMessage(error.message);
+      showError(error.message);
     } finally {
       setLoading(false);
     }
@@ -169,7 +175,6 @@ export default function BannerManagement() {
     setForm(initialForm);
     setSelectedFile(null);
     setPreviewUrl("");
-    setMessage("");
   };
 
   return (
@@ -183,12 +188,6 @@ export default function BannerManagement() {
             Admin hospital có thể tạo, cập nhật, bật/tắt và xóa banner.
           </p>
         </div>
-
-        {message && (
-          <div className="mb-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-            {message}
-          </div>
-        )}
 
         <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
           <form
