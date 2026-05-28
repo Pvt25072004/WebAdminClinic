@@ -51,7 +51,17 @@ export default function HospitalManagement() {
     email: "",
     main_specialty: "",
     categoryIds: [],
+    is_active: true,
   });
+
+  // Filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCity, setFilterCity] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+
+  const cities = Array.from(
+    new Set(hospitals.map((h) => h.city).filter(Boolean)),
+  );
 
   const loadCategories = async () => {
     try {
@@ -95,10 +105,10 @@ export default function HospitalManagement() {
     const isConfirm = await confirm(
       "Xác nhận xóa",
       "Bạn có chắc muốn xóa chuyên khoa này?",
-      { variant: "danger", confirmText: "Xóa" }
+      { variant: "danger", confirmText: "Xóa" },
     );
     if (!isConfirm) return;
-    
+
     try {
       await deleteCategory(id);
       showSuccess("Đã xóa chuyên khoa");
@@ -131,7 +141,18 @@ export default function HospitalManagement() {
       categoryIds: Array.isArray(hospital.categories)
         ? hospital.categories.map((c) => c.id)
         : [],
+      is_active: hospital.is_active ?? true,
     });
+  };
+
+  const handleToggleActive = async (hospital) => {
+    try {
+      await updateHospital(hospital.id, { is_active: !hospital.is_active });
+      showSuccess(`Đã ${!hospital.is_active ? "mở khóa" : "khóa"} bệnh viện`);
+      void loadHospitals();
+    } catch (e) {
+      showError(e.message || "Không thể cập nhật trạng thái");
+    }
   };
   const handleSubmitHospital = async (e) => {
     e.preventDefault();
@@ -158,10 +179,10 @@ export default function HospitalManagement() {
     const isConfirm = await confirm(
       "Xác nhận xóa",
       "Bạn có chắc muốn xóa bệnh viện này?",
-      { variant: "danger", confirmText: "Xóa" }
+      { variant: "danger", confirmText: "Xóa" },
     );
     if (!isConfirm) return;
-    
+
     try {
       await deleteHospital(id);
       showSuccess("Đã xóa bệnh viện");
@@ -180,6 +201,7 @@ export default function HospitalManagement() {
       email: "",
       main_specialty: "",
       categoryIds: [],
+      is_active: true,
     });
   };
 
@@ -187,6 +209,15 @@ export default function HospitalManagement() {
     void loadHospitals();
     void loadCategories();
   }, []);
+
+  const filteredHospitals = hospitals.filter((h) => {
+    const matchSearch = h.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCity = filterCity ? h.city === filterCity : true;
+    let matchStatus = true;
+    if (filterStatus === "active") matchStatus = h.is_active !== false;
+    if (filterStatus === "inactive") matchStatus = h.is_active === false;
+    return matchSearch && matchCity && matchStatus;
+  });
   return (
     <>
       <div>
@@ -203,8 +234,9 @@ export default function HospitalManagement() {
             size="sm"
             onClick={resetForm}
             variant={editingHospital ? "secondary" : "primary"}
+            className={!editingHospital ? "bg-slate-100 text-slate-700 hover:bg-slate-200" : ""}
           >
-            {editingHospital ? "Tạo mới" : "Reset"}
+            {editingHospital ? "Hủy chỉnh sửa" : "Làm mới Form"}
           </Button>
         </div>
 
@@ -376,16 +408,68 @@ export default function HospitalManagement() {
           </div>
         </form>
 
+        {/* Filters */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex flex-wrap gap-4 items-end">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+              Tìm kiếm
+            </label>
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Tên bệnh viện..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+              />
+            </div>
+          </div>
+          <div className="w-48">
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+              Khu vực
+            </label>
+            <select
+              value={filterCity}
+              onChange={(e) => setFilterCity(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white"
+            >
+              <option value="">Tất cả khu vực</option>
+              {cities.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="w-40">
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+              Trạng thái
+            </label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white"
+            >
+              <option value="all">Tất cả</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Đã khóa</option>
+            </select>
+          </div>
+        </div>
+
         <div className="space-y-4">
           {loadingHospitals && (
-            <p className="text-sm text-slate-500">Đang tải bệnh viện...</p>
-          )}
-          {!loadingHospitals && hospitals.length === 0 && (
-            <p className="text-sm text-slate-500">
-              Chưa có bệnh viện nào. Hãy thêm mới.
+            <p className="text-sm text-slate-500 text-center py-8">
+              Đang tải danh sách bệnh viện...
             </p>
           )}
-          {hospitals.map((hospital) => (
+          {!loadingHospitals && filteredHospitals.length === 0 && (
+            <p className="text-sm text-slate-500 text-center py-8">
+              Không tìm thấy bệnh viện nào.
+            </p>
+          )}
+          {filteredHospitals.map((hospital) => (
             <div
               key={hospital.id}
               className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
@@ -410,23 +494,40 @@ export default function HospitalManagement() {
                     </p>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={Edit3}
-                    onClick={() => handleEditHospital(hospital)}
+                <div className="flex flex-col gap-2 items-end">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 text-sm hover:bg-slate-50 px-3 py-1.5 rounded-full transition-colors mb-2"
+                    onClick={() => handleToggleActive(hospital)}
                   >
-                    Sửa
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    icon={Trash2}
-                    onClick={() => handleDeleteHospital(hospital.id)}
-                  >
-                    Xóa
-                  </Button>
+                    {(hospital.is_active ?? true) ? (
+                      <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-emerald-100">
+                        <ToggleRight className="w-3.5 h-3.5" /> Hoạt động
+                      </span>
+                    ) : (
+                      <span className="bg-slate-50 text-slate-500 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-slate-200">
+                        <ToggleLeft className="w-3.5 h-3.5" /> Khóa
+                      </span>
+                    )}
+                  </button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={Edit3}
+                      onClick={() => handleEditHospital(hospital)}
+                    >
+                      Sửa
+                    </Button>
+                    <Button
+                      variant="ghostDanger"
+                      size="sm"
+                      icon={Trash2}
+                      onClick={() => handleDeleteHospital(hospital.id)}
+                    >
+                      Xóa
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,8 +1,10 @@
 import { FaBell, FaSearch } from "react-icons/fa";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Header() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const normalizedRole = (
     user?.role ||
@@ -12,7 +14,10 @@ export default function Header() {
     "patient"
   ).toLowerCase();
 
-  const workspaceTitle = normalizedRole === "admin_hospital" ? "Admin Hospital Workspace" : "Admin Workspace";
+  const workspaceTitle =
+    normalizedRole === "admin_hospital"
+      ? "Admin Hospital Workspace"
+      : "Admin Workspace";
 
   return (
     <header className="sticky top-0 z-50 -mx-6 mb-8 px-6 py-4 flex items-center justify-between max-md:flex-col max-md:items-start bg-white/80 backdrop-blur-md border-b border-slate-100/50 shadow-[0_2px_20px_rgba(0,0,0,0.02)] transition-all">
@@ -21,7 +26,7 @@ export default function Header() {
           Trung tâm điều hành hệ thống
         </p>
         <h1 className="bg-gradient-to-r from-[#262a39] to-emerald-500 bg-clip-text text-3xl font-bold text-transparent max-md:text-2xl">
-          {workspaceTitle}
+          {workspaceTitle}, xin chào {user?.full_name}
         </h1>
       </div>
 
@@ -31,12 +36,15 @@ export default function Header() {
           <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#f36c6c]" />
         </button>
 
-        <button className="relative flex items-center">
+        <button 
+          className="relative flex items-center"
+          onClick={() => navigate("/profile")}
+        >
           <span className="absolute h-[52px] w-[52px] rounded-full border-2 border-[#e6e9f4] shadow-[0_3px_15px_rgba(0,0,0,0.08)]" />
           <img
-            src="https://i.pravatar.cc/100?img=8"
-            alt="Alex Morgan"
-            className="h-[50px] w-[50px] rounded-full border-[3px] border-white object-cover transition duration-300 hover:scale-105"
+            src={user?.avatar_url || user?.avatar || "https://i.pravatar.cc/100?img=8"}
+            alt={user?.full_name || "Admin"}
+            className="h-[50px] w-[50px] rounded-full border-[3px] border-white object-cover transition duration-300 hover:scale-105 cursor-pointer"
           />
         </button>
 

@@ -7,13 +7,24 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  
+
   const { login, logout, isLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validation khớp với BE: email hợp lệ và password tối thiểu 6 ký tự
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Email không đúng định dạng.");
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      setError("Mật khẩu phải chứa ít nhất 6 ký tự.");
+      return;
+    }
 
     try {
       const response = await login({ email, password });
@@ -79,6 +90,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
               className="my-2 w-full rounded-[5px] border border-slate-500 p-2 outline-none"
             />
 

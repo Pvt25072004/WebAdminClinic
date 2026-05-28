@@ -19,6 +19,8 @@ export default function UserManagement() {
   const [hospitals, setHospitals] = useState([]);
   const [loadingHospitals, setLoadingHospitals] = useState(false);
 
+  const [roleFilter, setRoleFilter] = useState("all");
+
   const [showForm, setShowForm] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
   const [formData, setFormData] = useState({
@@ -54,11 +56,24 @@ export default function UserManagement() {
     void loadData();
   }, []);
 
-  const visibleUsers = users.filter((u) => u.role === "admin_hospital");
+  const visibleUsers = users.filter((u) => {
+    if (u.role === "admin") return false; // Không hiển thị admin tổng
+    if (roleFilter === "all") return true;
+    return u.role === roleFilter;
+  });
 
   const availableHospitals = hospitals.filter(h => 
-    !visibleUsers.some(u => String(u.hospital_id) === String(h.id) && u.id !== editingUserId)
+    !users.filter(u => u.role === "admin_hospital").some(u => String(u.hospital_id) === String(h.id) && u.id !== editingUserId)
   );
+
+  const getRoleLabel = (role) => {
+    switch(role) {
+      case "patient": return "Bệnh nhân";
+      case "doctor": return "Bác sĩ";
+      case "admin_hospital": return "Admin Bệnh viện";
+      default: return role;
+    }
+  };
 
   const handleEditUser = (user) => {
     setEditingUserId(user.id);
@@ -68,7 +83,7 @@ export default function UserManagement() {
       password: "", // Leave blank unless they want to change it
       phone: user.phone || "",
       hospital_id: user.hospital_id || "",
-      role: "admin_hospital",
+      role: user.role || "admin_hospital",
     });
     setShowForm(true);
   };
@@ -106,14 +121,19 @@ export default function UserManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.full_name || !formData.email || (!editingUserId && !formData.password) || !formData.hospital_id) {
+    const isHospitalAdmin = formData.role === "admin_hospital";
+    if (!formData.full_name || !formData.email || (!editingUserId && !formData.password) || (isHospitalAdmin && !formData.hospital_id)) {
       showError("Vui lòng điền đầy đủ các thông tin bắt buộc.");
       return;
     }
     try {
       setSubmitting(true);
       const payload = { ...formData };
-      payload.hospital_id = Number(payload.hospital_id);
+      if (isHospitalAdmin) {
+        payload.hospital_id = Number(payload.hospital_id);
+      } else {
+        payload.hospital_id = null; // Reset if not hospital admin
+      }
       
       if (editingUserId && !payload.password) {
         delete payload.password; // Don't send empty password if editing
@@ -163,10 +183,10 @@ export default function UserManagement() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">
-            Quản lý Admin Bệnh Viện
+            Quản lý Tài Khoản Người Dùng
           </h2>
           <p className="text-sm text-slate-500">
-            Danh sách tài khoản quản trị viên cho các cơ sở y tế
+            Quản lý tất cả bác sĩ, bệnh nhân, và admin trên hệ thống
           </p>
         </div>
         <Button size="sm" icon={Plus} onClick={() => {
@@ -182,8 +202,21 @@ export default function UserManagement() {
 
       {showForm && (
         <div className="mb-6 border border-slate-200 rounded-lg p-6 bg-white shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">{editingUserId ? "Cập nhật tài khoản Admin" : "Tạo tài khoản Admin Hospital"}</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">{editingUserId ? "Cập nhật tài khoản" : "Tạo tài khoản mới"}</h3>
           <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Loại tài khoản *</label>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg bg-white"
+                disabled={!!editingUserId} // Usually changing role of an existing user is restricted
+              >
+                <option value="patient">Bệnh nhân</option>
+                <option value="doctor">Bác sĩ</option>
+                <option value="admin_hospital">Admin Bệnh viện</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Họ và tên *</label>
               <input
@@ -223,20 +256,22 @@ export default function UserManagement() {
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Cơ sở y tế (Bệnh viện) *</label>
-              <select
-                value={formData.hospital_id}
-                onChange={(e) => setFormData({ ...formData, hospital_id: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg bg-white"
-                required
-              >
-                <option value="">-- Chọn bệnh viện quản lý --</option>
-                {availableHospitals.map(h => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
-                ))}
-              </select>
-            </div>
+            {formData.role === "admin_hospital" && (
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Cơ sở y tế (Bệnh viện) *</label>
+                <select
+                  value={formData.hospital_id}
+                  onChange={(e) => setFormData({ ...formData, hospital_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg bg-white"
+                  required
+                >
+                  <option value="">-- Chọn bệnh viện quản lý --</option>
+                  {availableHospitals.map(h => (
+                    <option key={h.id} value={h.id}>{h.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="md:col-span-2 flex justify-end mt-2 gap-2">
               <Button type="button" variant="outline" onClick={handleCancel}>
                 Hủy
@@ -249,12 +284,27 @@ export default function UserManagement() {
         </div>
       )}
 
+      <div className="flex items-center gap-4 mb-4">
+        <label className="text-sm font-medium text-slate-700">Lọc theo vai trò:</label>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white min-w-[200px]"
+        >
+          <option value="all">Tất cả</option>
+          <option value="patient">Bệnh nhân</option>
+          <option value="doctor">Bác sĩ</option>
+          <option value="admin_hospital">Admin Bệnh viện</option>
+        </select>
+      </div>
+
       <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-slate-100">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-medium">
             <tr className="text-left">
               <th className="py-3 px-4">Tên</th>
               <th className="py-3 px-4">Email</th>
+              <th className="py-3 px-4">Vai trò</th>
               <th className="py-3 px-4">Bệnh viện</th>
               <th className="py-3 px-4 text-center">Trạng thái</th>
               <th className="py-3 px-4"></th>
@@ -290,8 +340,13 @@ export default function UserManagement() {
                     {user.full_name}
                   </td>
                   <td className="py-3 px-4 text-slate-500">{user.email}</td>
+                  <td className="py-3 px-4 text-slate-500">
+                    <span className="px-2 py-1 rounded bg-slate-100 text-xs font-medium">
+                      {getRoleLabel(user.role)}
+                    </span>
+                  </td>
                   <td className="py-3 px-4 text-slate-500 font-medium">
-                    {hosp ? hosp.name : (user.hospital_id || 'Chưa gắn kết')}
+                    {user.role === "admin_hospital" ? (hosp ? hosp.name : (user.hospital_id || 'Chưa gắn kết')) : '-'}
                   </td>
                   <td className="py-3 px-4 text-center">
                     <button

@@ -1,15 +1,57 @@
-import { FaRegClock } from "react-icons/fa";
+import { useState } from "react";
+import { FaRegClock, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 export default function TransactionCard({ title, items }) {
-  return (
-    <section className="rounded-[18px] bg-white p-6 shadow-card">
-      <h3 className="relative mb-6 inline-block text-xl font-semibold after:absolute after:-bottom-2 after:left-0 after:h-[3px] after:w-[40%] after:rounded after:bg-emerald-500">
-        {title}
-      </h3>
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
+  
+  const totalPages = Math.ceil((items?.length || 0) / itemsPerPage);
+  
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentItems = items ? items.slice(startIndex, startIndex + itemsPerPage) : [];
 
+  const goToPrev = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  const goToNext = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+
+  return (
+    <section className="rounded-[18px] bg-white p-6 shadow-card flex flex-col justify-between h-full">
       <div>
-        {items.map((item) => {
-          const Icon = item.Icon;
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="relative inline-block text-xl font-semibold after:absolute after:-bottom-2 after:left-0 after:h-[3px] after:w-[40%] after:rounded after:bg-emerald-500">
+            {title}
+          </h3>
+          
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={goToPrev}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#f5f7ff] text-emerald-600 hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <FaChevronLeft className="w-3 h-3" />
+              </button>
+              <span className="text-sm font-medium text-slate-500">
+                {currentPage} / {totalPages}
+              </span>
+              <button 
+                onClick={goToNext}
+                disabled={currentPage === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#f5f7ff] text-emerald-600 hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <FaChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="min-h-[250px]">
+          {currentItems.length === 0 ? (
+            <div className="flex items-center justify-center h-[200px] text-sm text-slate-400">
+              Không có dữ liệu
+            </div>
+          ) : (
+            currentItems.map((item, index) => {
+              const Icon = item.Icon;
 
           return (
             <div
@@ -46,7 +88,9 @@ export default function TransactionCard({ title, items }) {
               </div>
             </div>
           );
-        })}
+            })
+          )}
+        </div>
       </div>
     </section>
   );
