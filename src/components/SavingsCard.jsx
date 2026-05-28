@@ -1,11 +1,11 @@
 export default function SavingsCard({ timeOptions, months }) {
   return (
     <section className="rounded-[18px] bg-white p-8 shadow-card">
-      <h3 className="mb-4 flex items-center text-[17px] text-[#6c7380] before:mr-2.5 before:h-2 before:w-2 before:rounded-full before:bg-[#4270f4] before:content-['']">
+      <h3 className="mb-4 flex items-center text-[17px] text-[#6c7380] before:mr-2.5 before:h-2 before:w-2 before:rounded-full before:bg-emerald-500 before:content-['']">
         Monthly Savings
       </h3>
 
-      <div className="relative mb-6 inline-block bg-gradient-to-br from-[#4270f4] to-[#6a85f1] bg-clip-text text-[40px] font-extrabold text-transparent after:absolute after:bottom-0 after:left-1 after:h-[3px] after:w-10 after:rounded after:bg-gradient-to-br after:from-[#4270f4] after:to-[#6a85f1] max-md:text-[32px]">
+      <div className="relative mb-6 inline-block bg-gradient-to-br from-emerald-500 to-[#6a85f1] bg-clip-text text-[40px] font-extrabold text-transparent after:absolute after:bottom-0 after:left-1 after:h-[3px] after:w-10 after:rounded after:bg-gradient-to-br after:from-emerald-500 after:to-[#6a85f1] max-md:text-[32px]">
         $467.5
       </div>
 
@@ -14,9 +14,9 @@ export default function SavingsCard({ timeOptions, months }) {
           <button
             key={option}
             className={[
-              "whitespace-nowrap rounded-full px-[18px] py-2 text-sm font-medium transition duration-300 hover:text-[#4270f4] max-sm:px-3",
+              "whitespace-nowrap rounded-full px-[18px] py-2 text-sm font-medium transition duration-300 hover:text-emerald-500 max-sm:px-3",
               option === "Monthly"
-                ? "bg-[#4270f4] font-semibold text-white shadow-[0_5px_10px_rgba(66,112,244,0.3)] hover:text-white"
+                ? "bg-emerald-500 font-semibold text-white shadow-[0_5px_10px_rgba(16,185,129,0.3)] hover:text-white"
                 : "text-[#6c7380]",
             ].join(" ")}
           >
@@ -41,7 +41,7 @@ export default function SavingsCard({ timeOptions, months }) {
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="drop-shadow-[0_5px_5px_rgba(66,112,244,0.2)]"
+            className="drop-shadow-[0_5px_5px_rgba(16,185,129,0.2)]"
           />
 
           <path
@@ -59,9 +59,9 @@ export default function SavingsCard({ timeOptions, months }) {
           <button
             key={month}
             className={[
-              "relative rounded-full px-2.5 py-1 text-sm font-medium transition duration-300 hover:bg-[#edf0fb] hover:text-[#4270f4]",
+              "relative rounded-full px-2.5 py-1 text-sm font-medium transition duration-300 hover:bg-[#edf0fb] hover:text-emerald-500",
               month === "Dec"
-                ? "bg-[#edf0fb] font-semibold text-[#4270f4] after:absolute after:-top-[50px] after:left-1/2 after:h-3 after:w-3 after:-translate-x-1/2 after:rounded-full after:border-[3px] after:border-white after:bg-[#4270f4] after:shadow-[0_0_10px_rgba(66,112,244,0.5)] after:content-['']"
+                ? "bg-[#edf0fb] font-semibold text-emerald-500 after:absolute after:-top-[50px] after:left-1/2 after:h-3 after:w-3 after:-translate-x-1/2 after:rounded-full after:border-[3px] after:border-white after:bg-emerald-500 after:shadow-[0_0_10px_rgba(16,185,129,0.5)] after:content-['']"
                 : "text-[#6c7380]",
             ].join(" ")}
           >

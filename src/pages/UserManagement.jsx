@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Button from "../components/Button";
-import { Plus, Edit3, Trash2, ToggleRight, ToggleLeft } from "lucide-react";
+import { Plus, Edit3, Trash2, ToggleRight, ToggleLeft, Inbox } from "lucide-react";
 import {
   getUsers,
   toggleUserActive,
@@ -162,10 +162,10 @@ export default function UserManagement() {
     <div className="xl:col-span-2">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-slate-900">
             Quản lý Admin Bệnh Viện
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Danh sách tài khoản quản trị viên cho các cơ sở y tế
           </p>
         </div>
@@ -181,11 +181,11 @@ export default function UserManagement() {
       </div>
 
       {showForm && (
-        <div className="mb-6 border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">{editingUserId ? "Cập nhật tài khoản Admin" : "Tạo tài khoản Admin Hospital"}</h3>
+        <div className="mb-6 border border-slate-200 rounded-lg p-6 bg-white shadow-sm">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">{editingUserId ? "Cập nhật tài khoản Admin" : "Tạo tài khoản Admin Hospital"}</h3>
           <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Họ và tên *</label>
               <input
                 type="text"
                 value={formData.full_name}
@@ -195,7 +195,7 @@ export default function UserManagement() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email đăng nhập *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email đăng nhập *</label>
               <input
                 type="email"
                 value={formData.email}
@@ -205,7 +205,7 @@ export default function UserManagement() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu {editingUserId ? "(Để trống nếu không đổi)" : "*"}</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu {editingUserId ? "(Để trống nếu không đổi)" : "*"}</label>
               <input
                 type="password"
                 value={formData.password}
@@ -215,7 +215,7 @@ export default function UserManagement() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại</label>
               <input
                 type="text"
                 value={formData.phone}
@@ -224,7 +224,7 @@ export default function UserManagement() {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cơ sở y tế (Bệnh viện) *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Cơ sở y tế (Bệnh viện) *</label>
               <select
                 value={formData.hospital_id}
                 onChange={(e) => setFormData({ ...formData, hospital_id: e.target.value })}
@@ -249,29 +249,35 @@ export default function UserManagement() {
         </div>
       )}
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+      <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-slate-100">
         <table className="min-w-full text-sm">
-          <thead>
-            <tr className="text-left text-gray-500 border-b">
-              <th className="py-3 px-2">Tên</th>
-              <th className="py-3 px-2">Email</th>
-              <th className="py-3 px-2">Bệnh viện</th>
-              <th className="py-3 px-2 text-center">Trạng thái</th>
-              <th className="py-3 px-2"></th>
+          <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-medium">
+            <tr className="text-left">
+              <th className="py-3 px-4">Tên</th>
+              <th className="py-3 px-4">Email</th>
+              <th className="py-3 px-4">Bệnh viện</th>
+              <th className="py-3 px-4 text-center">Trạng thái</th>
+              <th className="py-3 px-4"></th>
             </tr>
           </thead>
           <tbody>
             {loadingUsers && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-gray-500">
-                  Đang tải người dùng...
+                <td colSpan={5} className="py-12 text-center text-slate-500">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mb-4"></div>
+                    Đang tải người dùng...
+                  </div>
                 </td>
               </tr>
             )}
             {!loadingUsers && visibleUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-gray-500">
-                  Chưa có tài khoản admin_hospital nào.
+                <td colSpan={5} className="py-12 text-center text-slate-500">
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                    <Inbox className="w-12 h-12 mb-3 text-slate-300" />
+                    <p className="font-medium">Chưa có tài khoản admin_hospital nào.</p>
+                  </div>
                 </td>
               </tr>
             )}
@@ -279,32 +285,32 @@ export default function UserManagement() {
               visibleUsers.map((user) => {
                 const hosp = hospitals.find(h => String(h.id) === String(user.hospital_id));
                 return (
-                <tr key={user.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="py-3 px-2 font-medium text-gray-900">
+                <tr key={user.id} className="border-b border-slate-100 hover:bg-emerald-50/50 transition-colors last:border-0">
+                  <td className="py-3 px-4 font-medium text-slate-900">
                     {user.full_name}
                   </td>
-                  <td className="py-3 px-2 text-gray-500">{user.email}</td>
-                  <td className="py-3 px-2 text-gray-500 font-medium">
+                  <td className="py-3 px-4 text-slate-500">{user.email}</td>
+                  <td className="py-3 px-4 text-slate-500 font-medium">
                     {hosp ? hosp.name : (user.hospital_id || 'Chưa gắn kết')}
                   </td>
-                  <td className="py-3 px-2 text-center">
+                  <td className="py-3 px-4 text-center">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 text-sm"
+                      className="inline-flex items-center gap-1.5 text-sm hover:bg-slate-100 px-3 py-1.5 rounded-full transition-colors"
                       onClick={() => handleToggleUser(user)}
                     >
                       {(user.is_active ?? true) ? (
-                        <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                           <ToggleRight className="w-3 h-3" /> Hoạt động
+                        <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-emerald-100">
+                           <ToggleRight className="w-3.5 h-3.5" /> Hoạt động
                         </span>
                       ) : (
-                        <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                           <ToggleLeft className="w-3 h-3" /> Tạm ngưng
+                        <span className="bg-slate-50 text-slate-500 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-slate-200">
+                           <ToggleLeft className="w-3.5 h-3.5" /> Tạm ngưng
                         </span>
                       )}
                     </button>
                   </td>
-                  <td className="py-3 px-2 text-right">
+                  <td className="py-3 px-4 text-right">
                     <div className="flex gap-2 justify-end">
                       <Button
                         size="sm"

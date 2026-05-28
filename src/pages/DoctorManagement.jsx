@@ -107,10 +107,10 @@ export default function DoctorManagement() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-slate-900">
             Quản lý bác sĩ
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Phê duyệt & khóa tài khoản bác sĩ
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function DoctorManagement() {
       <form onSubmit={handleSubmitDoctor} className="mb-6 grid gap-4">
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Họ tên bác sĩ
             </label>
             <input
@@ -149,11 +149,11 @@ export default function DoctorManagement() {
                 }))
               }
               required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Chuyên khoa
             </label>
             <select
@@ -170,7 +170,7 @@ export default function DoctorManagement() {
                 }));
               }}
               required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
             >
               <option value="">Chọn chuyên khoa</option>
               {categories.map((cat) => (
@@ -183,7 +183,7 @@ export default function DoctorManagement() {
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Email
             </label>
             <input
@@ -196,11 +196,11 @@ export default function DoctorManagement() {
                 }))
               }
               required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Số điện thoại
             </label>
             <input
@@ -213,13 +213,13 @@ export default function DoctorManagement() {
                 }))
               }
               required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Mật khẩu đăng nhập
             </label>
             <input
@@ -232,11 +232,11 @@ export default function DoctorManagement() {
                 }))
               }
               required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Mô tả ngắn
             </label>
             <input
@@ -248,7 +248,7 @@ export default function DoctorManagement() {
                   description: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -261,42 +261,45 @@ export default function DoctorManagement() {
 
       <div className="space-y-4">
         {loadingDoctors && (
-          <p className="text-sm text-gray-500">Đang tải danh sách bác sĩ...</p>
+          <p className="text-sm text-slate-500">Đang tải danh sách bác sĩ...</p>
         )}
         {!loadingDoctors && doctors.length === 0 && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Chưa có bác sĩ nào (hoặc API chưa trả dữ liệu).
           </p>
         )}
         {doctors.map((doctor) => (
-          <div key={doctor.id} padding="sm" shadow="none">
+          <div
+            key={doctor.id}
+            className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
+          >
             <div className="flex justify-between gap-4">
               <div>
-                <h3 className="font-semibold text-gray-900">{doctor.name}</h3>
-                <p className="text-sm text-gray-500">
+                <h3 className="font-semibold text-slate-900">{doctor.name}</h3>
+                <p className="text-sm text-slate-500">
                   {doctor.specialty}
                   {doctor.category?.name
                     ? ` · Chuyên khoa: ${doctor.category.name}`
                     : ""}
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-slate-400">
                   Email: {doctor.email} · SĐT: {doctor.phone}
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="flex items-center gap-1 text-sm text-gray-600"
+                  className="flex items-center gap-1 text-sm text-slate-600"
                   onClick={() => handleToggleDoctor(doctor)}
                 >
                   {doctor.is_active ? (
                     <>
-                      <ToggleRight className="text-green-500" />
+                      <ToggleRight className="text-emerald-500" />
                       <span>Đang hoạt động</span>
                     </>
                   ) : (
                     <>
-                      <ToggleLeft className="text-gray-400" />
+                      <ToggleLeft className="text-slate-400" />
                       <span>Tạm khóa</span>
                     </>
                   )}

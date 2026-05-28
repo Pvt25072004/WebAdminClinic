@@ -59,19 +59,19 @@ export default function DoctorRequestsManagement() {
     <div className="xl:col-span-2">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-slate-900">
             Duyệt yêu cầu bác sĩ
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Quản lý các bác sĩ xin phép làm việc hoặc xin nghỉ tại cơ sở y tế của bạn
           </p>
         </div>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+      <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-slate-100 p-4">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-500 border-b">
+            <tr className="text-left text-slate-500 border-b">
               <th className="py-3 px-2">Ngày gửi</th>
               <th className="py-3 px-2">Bác sĩ</th>
               <th className="py-3 px-2">Loại yêu cầu</th>
@@ -84,39 +84,39 @@ export default function DoctorRequestsManagement() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-gray-500">
+                <td colSpan={6} className="py-8 text-center text-slate-500">
                   Đang tải dữ liệu...
                 </td>
               </tr>
             )}
             {!loading && requests.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-gray-500">
+                <td colSpan={6} className="py-8 text-center text-slate-500">
                   Không có yêu cầu nào.
                 </td>
               </tr>
             )}
             {!loading &&
               requests.map((req) => (
-                <tr key={req.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="py-3 px-2 text-gray-500">
+                <tr key={req.id} className="border-b last:border-0 hover:bg-slate-50">
+                  <td className="py-3 px-2 text-slate-500">
                     {new Date(req.created_at).toLocaleDateString('vi-VN')}
                   </td>
-                  <td className="py-3 px-2 font-medium text-gray-900">
+                  <td className="py-3 px-2 font-medium text-slate-900">
                     {req.doctor?.name || `BS ID: ${req.doctor_id}`}
                   </td>
-                  <td className="py-3 px-2 text-gray-500">
+                  <td className="py-3 px-2 text-slate-500">
                     {req.type === 'leave' ? (
                       <span className="text-red-600 font-medium">Hủy liên kết</span>
                     ) : (
-                      <span className="text-blue-600 font-medium">Xin việc</span>
+                      <span className="text-emerald-600 font-medium">Xin việc</span>
                     )}
                   </td>
-                  <td className="py-3 px-2 text-gray-500">
+                  <td className="py-3 px-2 text-slate-500">
                     {req.doctor?.specialty || "Không xác định"}
                   </td>
-                  <td className="py-3 px-2 text-gray-600 max-w-xs truncate" title={req.message}>
-                    {req.message || <span className="text-gray-400 italic">Không có lời nhắn</span>}
+                  <td className="py-3 px-2 text-slate-600 max-w-xs truncate" title={req.message}>
+                    {req.message || <span className="text-slate-400 italic">Không có lời nhắn</span>}
                   </td>
                   <td className="py-3 px-2 text-center">
                     {req.status === 'pending' && <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Đang chờ duyệt</span>}

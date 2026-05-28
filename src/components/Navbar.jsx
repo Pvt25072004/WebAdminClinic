@@ -10,10 +10,10 @@ export default function Navbar({ navItems }) {
             to={url || "/"}
             className={({ isActive }) =>
               [
-                "mb-2 flex items-center rounded-xl border-l-[3px] px-5 py-3.5 text-[15px] font-medium transition-all duration-300 hover:translate-x-1 hover:bg-[#edf0fb] hover:text-[#4270f4]",
+                "mb-2 flex items-center rounded-xl border-l-[3px] px-5 py-3.5 text-[15px] font-medium transition-all duration-300 hover:translate-x-1 hover:bg-[#edf0fb] hover:text-emerald-500",
                 "max-lg:justify-center max-lg:px-0 max-lg:py-4",
                 isActive
-                  ? "border-[#4270f4] bg-[#edf0fb] font-semibold text-[#4270f4]"
+                  ? "border-emerald-500 bg-[#edf0fb] font-semibold text-emerald-500"
                   : "border-transparent text-[#6c7380]",
               ].join(" ")
             }

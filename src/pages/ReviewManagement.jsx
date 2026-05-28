@@ -52,10 +52,10 @@ export default function ReviewManagement() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-slate-900">
             Giám sát đánh giá
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Số sao trung bình của từng bác sĩ
           </p>
         </div>
@@ -71,24 +71,27 @@ export default function ReviewManagement() {
 
       <div className="space-y-4">
         {loadingReviewsAdmin && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Đang tải danh sách đánh giá...
           </p>
         )}
         {!loadingReviewsAdmin && doctorRatings.length === 0 && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Chưa có đánh giá nào cho bác sĩ.
           </p>
         )}
         {!loadingReviewsAdmin &&
           doctorRatings.map((doctorRating) => (
-            <div key={doctorRating.doctorId} padding="sm" shadow="none">
+            <div
+              key={doctorRating.doctorId}
+              className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
+            >
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="font-semibold text-gray-900">
+                  <p className="font-semibold text-slate-900">
                     {doctorRating.doctorName}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-slate-500">
                     {doctorRating.totalReviews} đánh giá
                   </p>
                 </div>
@@ -97,7 +100,7 @@ export default function ReviewManagement() {
                     <span className="text-2xl font-bold text-amber-500">
                       ⭐ {doctorRating.averageRating}
                     </span>
-                    <span className="text-sm text-gray-500">/ 5.0</span>
+                    <span className="text-sm text-slate-500">/ 5.0</span>
                   </div>
                 </div>
               </div>

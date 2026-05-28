@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import Button from "../components/Button";
+import { Edit3, Trash2 } from "lucide-react";
 import {
   createHospitalBanner,
   deleteHospitalBanner,
@@ -178,13 +180,13 @@ export default function BannerManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">
+          <h1 className="text-2xl font-bold text-slate-800">
             Quản lý banner bệnh viện
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Admin hospital có thể tạo, cập nhật, bật/tắt và xóa banner.
           </p>
         </div>
@@ -194,7 +196,7 @@ export default function BannerManagement() {
             onSubmit={handleSubmit}
             className="rounded-xl bg-white p-5 shadow"
           >
-            <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            <h2 className="mb-4 text-lg font-semibold text-slate-800">
               {editingId ? "Cập nhật banner" : "Tạo banner mới"}
             </h2>
 
@@ -208,7 +210,7 @@ export default function BannerManagement() {
                   value={form.title}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
                   placeholder="Nhập tiêu đề banner"
                 />
               </div>
@@ -219,7 +221,7 @@ export default function BannerManagement() {
                   name="description"
                   value={form.description}
                   onChange={handleChange}
-                  className="w-full rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
                   placeholder="Nhập mô tả"
                   rows={3}
                 />
@@ -253,7 +255,7 @@ export default function BannerManagement() {
                   name="redirect_url"
                   value={form.redirect_url}
                   onChange={handleChange}
-                  className="w-full rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
                   placeholder="/doctors/1 hoặc /categories/2"
                 />
               </div>
@@ -268,7 +270,7 @@ export default function BannerManagement() {
                     value={form.category_id}
                     onChange={handleChange}
                     type="number"
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
                     placeholder="Optional"
                   />
                 </div>
@@ -282,7 +284,7 @@ export default function BannerManagement() {
                     value={form.doctor_id}
                     onChange={handleChange}
                     type="number"
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
                     placeholder="Optional"
                   />
                 </div>
@@ -298,7 +300,7 @@ export default function BannerManagement() {
                   onChange={handleChange}
                   type="number"
                   min="0"
-                  className="w-full rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -312,7 +314,7 @@ export default function BannerManagement() {
                     value={form.start_date}
                     onChange={handleChange}
                     type="date"
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
                   />
                 </div>
 
@@ -325,7 +327,7 @@ export default function BannerManagement() {
                     value={form.end_date}
                     onChange={handleChange}
                     type="date"
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -341,22 +343,23 @@ export default function BannerManagement() {
               </label>
 
               <div className="flex gap-3">
-                <button
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
+                  loading={loading}
+                  variant="primary"
+                  className="flex-1"
                 >
                   {editingId ? "Cập nhật" : "Tạo mới"}
-                </button>
+                </Button>
 
                 {editingId && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={handleCancelEdit}
-                    className="rounded-lg border px-4 py-2 hover:bg-gray-50"
                   >
                     Hủy
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -364,18 +367,19 @@ export default function BannerManagement() {
 
           <div className="rounded-xl bg-white p-5 shadow">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800">
+              <h2 className="text-lg font-semibold text-slate-800">
                 Danh sách banner
               </h2>
-              <button
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={loadBanners}
-                className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
               >
                 Tải lại
-              </button>
+              </Button>
             </div>
 
-            {loading && <p className="text-sm text-gray-500">Đang tải...</p>}
+            {loading && <p className="text-sm text-slate-500">Đang tải...</p>}
 
             <div className="space-y-4">
               {banners.map((banner) => (
@@ -392,10 +396,10 @@ export default function BannerManagement() {
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-semibold text-gray-800">
+                        <h3 className="font-semibold text-slate-800">
                           {banner.title}
                         </h3>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-slate-500">
                           {banner.description || "Không có mô tả"}
                         </p>
                       </div>
@@ -403,15 +407,15 @@ export default function BannerManagement() {
                       <span
                         className={`rounded-full px-3 py-1 text-xs ${
                           banner.is_active
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-600"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-600"
                         }`}
                       >
                         {banner.is_active ? "Active" : "Inactive"}
                       </span>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-600">
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">
                       <p>Priority: {banner.priority}</p>
                       <p>Doctor ID: {banner.doctor_id || "-"}</p>
                       <p>Category ID: {banner.category_id || "-"}</p>
@@ -419,26 +423,30 @@ export default function BannerManagement() {
                     </div>
 
                     <div className="mt-4 flex gap-2">
-                      <button
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={Edit3}
                         onClick={() => handleEdit(banner)}
-                        className="rounded-lg bg-yellow-500 px-3 py-2 text-sm text-white hover:bg-yellow-600"
                       >
                         Sửa
-                      </button>
+                      </Button>
 
-                      <button
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon={Trash2}
                         onClick={() => handleDelete(banner.id)}
-                        className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700"
                       >
                         Xóa
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
               ))}
 
               {!loading && banners.length === 0 && (
-                <p className="text-sm text-gray-500">Chưa có banner nào.</p>
+                <p className="text-sm text-slate-500">Chưa có banner nào.</p>
               )}
             </div>
           </div>

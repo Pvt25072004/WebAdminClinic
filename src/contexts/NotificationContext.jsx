@@ -67,24 +67,24 @@ export const NotificationProvider = ({ children }) => {
                 ? "border-emerald-100"
                 : toast.type === "error"
                 ? "border-l-4 border-l-red-500 border-red-100"
-                : "border-blue-100"
+                : "border-emerald-100"
             }`}
           >
             <div className="flex-shrink-0 mr-3">
               {toast.type === "success" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
               {toast.type === "error" && <AlertCircle className="w-5 h-5 text-red-500" />}
-              {toast.type === "info" && <Info className="w-5 h-5 text-blue-500" />}
+              {toast.type === "info" && <Info className="w-5 h-5 text-emerald-500" />}
             </div>
             <div className="flex-1">
               <p className={`text-sm font-medium ${
-                toast.type === "error" ? "text-red-800" : "text-gray-800"
+                toast.type === "error" ? "text-red-800" : "text-slate-800"
               }`}>
                 {toast.message}
               </p>
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="flex-shrink-0 ml-4 text-gray-400 hover:text-gray-600 transition-colors"
+              className="flex-shrink-0 ml-4 text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -95,12 +95,12 @@ export const NotificationProvider = ({ children }) => {
       {/* Confirm Dialog Modal */}
       {confirmDialog && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={confirmDialog.onCancel}></div>
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={confirmDialog.onCancel}></div>
           <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
               {confirmDialog.title}
             </h3>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-slate-600 mb-6">
               {confirmDialog.message}
             </p>
             <div className="flex justify-end gap-3">

@@ -24,10 +24,10 @@ export default function PaymentManagement() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-slate-900">
             Giám sát thanh toán
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Đối soát doanh thu từng lịch hẹn
           </p>
         </div>
@@ -38,7 +38,7 @@ export default function PaymentManagement() {
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-500 border-b">
+            <tr className="text-left text-slate-500 border-b">
               <th className="py-2">Mã</th>
               <th>Bệnh nhân</th>
               <th>Doctor</th>
@@ -50,14 +50,14 @@ export default function PaymentManagement() {
           <tbody>
             {loadingPaymentsAdmin && (
               <tr>
-                <td colSpan={6} className="py-3 text-center text-gray-500">
+                <td colSpan={6} className="py-3 text-center text-slate-500">
                   Đang tải danh sách thanh toán...
                 </td>
               </tr>
             )}
             {!loadingPaymentsAdmin && adminPayments.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-3 text-center text-gray-500">
+                <td colSpan={6} className="py-3 text-center text-slate-500">
                   Chưa có thanh toán nào.
                 </td>
               </tr>
@@ -83,7 +83,7 @@ export default function PaymentManagement() {
                     : Number(payment.amount || 0);
                 return (
                   <tr key={payment.id} className="border-b last:border-0">
-                    <td className="py-3 font-mono text-xs text-gray-500">
+                    <td className="py-3 font-mono text-xs text-slate-500">
                       {`PAY-${payment.id}`}
                     </td>
                     <td>{patientName}</td>
@@ -91,10 +91,10 @@ export default function PaymentManagement() {
                     <td className="text-emerald-600 font-semibold">
                       {amountNumber.toLocaleString("vi-VN")}đ
                     </td>
-                    <td className="text-gray-500">
+                    <td className="text-slate-500">
                       {payment.payment_method || payment.method || "-"}
                     </td>
-                    <td className="text-gray-500">{createdText}</td>
+                    <td className="text-slate-500">{createdText}</td>
                   </tr>
                 );
               })}

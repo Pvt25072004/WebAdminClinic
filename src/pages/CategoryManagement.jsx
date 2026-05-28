@@ -78,10 +78,10 @@ export default function CategoryManagement() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-slate-900">
             Danh mục / Chuyên khoa
           </h2>
-          <p className="text-sm text-gray-500">Quản lý danh sách chuyên khoa</p>
+          <p className="text-sm text-slate-500">Quản lý danh sách chuyên khoa</p>
         </div>
         <Button
           size="sm"
@@ -95,7 +95,7 @@ export default function CategoryManagement() {
       {/* Form tạo / sửa chuyên khoa */}
       <form onSubmit={handleSubmitCategory} className="mb-4 space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-slate-700 mb-1">
             Tên chuyên khoa
           </label>
           <input
@@ -108,7 +108,7 @@ export default function CategoryManagement() {
               }))
             }
             required
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div className="flex justify-end gap-2">
@@ -130,18 +130,21 @@ export default function CategoryManagement() {
 
       <div className="space-y-3">
         {loadingCategories && (
-          <p className="text-sm text-gray-500">Đang tải chuyên khoa...</p>
+          <p className="text-sm text-slate-500">Đang tải chuyên khoa...</p>
         )}
         {!loadingCategories && categories.length === 0 && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Chưa có chuyên khoa nào. Hãy thêm mới.
           </p>
         )}
         {categories.map((category) => (
-          <div key={category.id} padding="sm" shadow="none">
+          <div
+            key={category.id}
+            className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">{category.name}</p>
+                <p className="font-medium text-slate-900">{category.name}</p>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -151,7 +154,7 @@ export default function CategoryManagement() {
                   onClick={() => handleEditCategory(category)}
                 />
                 <Button
-                  variant="ghost"
+                  variant="ghostDanger"
                   size="sm"
                   icon={Trash2}
                   onClick={() => handleDeleteCategory(category.id)}

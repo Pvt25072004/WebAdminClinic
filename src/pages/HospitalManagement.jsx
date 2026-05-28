@@ -192,10 +192,10 @@ export default function HospitalManagement() {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-slate-900">
               Quản lý bệnh viện
             </h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-slate-500">
               Thêm/Sửa/Xóa thông tin cơ sở y tế
             </p>
           </div>
@@ -212,7 +212,7 @@ export default function HospitalManagement() {
         <form onSubmit={handleSubmitHospital} className="mb-6 grid gap-4">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Tên bệnh viện
               </label>
               <input
@@ -225,11 +225,11 @@ export default function HospitalManagement() {
                   }))
                 }
                 required
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Chuyên khoa chính
               </label>
               <input
@@ -241,13 +241,13 @@ export default function HospitalManagement() {
                     main_specialty: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Thành phố/Tỉnh
               </label>
               <input
@@ -260,11 +260,11 @@ export default function HospitalManagement() {
                   }))
                 }
                 placeholder="Ví dụ: TP. Hồ Chí Minh, Hà Nội..."
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Địa chỉ cụ thể
               </label>
               <input
@@ -277,13 +277,13 @@ export default function HospitalManagement() {
                   }))
                 }
                 placeholder="Số nhà, đường, phường/xã..."
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Số điện thoại
               </label>
               <input
@@ -295,11 +295,11 @@ export default function HospitalManagement() {
                     phone: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Email
               </label>
               <input
@@ -311,13 +311,13 @@ export default function HospitalManagement() {
                     email: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
           {/* Chọn nhiều chuyên khoa cho bệnh viện */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Chuyên khoa áp dụng
             </label>
             <div className="flex flex-wrap gap-2">
@@ -330,7 +330,7 @@ export default function HospitalManagement() {
                   >
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300"
+                      className="rounded border-slate-300"
                       checked={!!checked}
                       onChange={(e) => {
                         setHospitalForm((prev) => {
@@ -353,7 +353,7 @@ export default function HospitalManagement() {
                 );
               })}
               {!categories.length && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-slate-400">
                   Chưa có dữ liệu chuyên khoa
                 </span>
               )}
@@ -378,31 +378,34 @@ export default function HospitalManagement() {
 
         <div className="space-y-4">
           {loadingHospitals && (
-            <p className="text-sm text-gray-500">Đang tải bệnh viện...</p>
+            <p className="text-sm text-slate-500">Đang tải bệnh viện...</p>
           )}
           {!loadingHospitals && hospitals.length === 0 && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-slate-500">
               Chưa có bệnh viện nào. Hãy thêm mới.
             </p>
           )}
           {hospitals.map((hospital) => (
-            <div key={hospital.id} padding="sm" shadow="none">
+            <div
+              key={hospital.id}
+              className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
+            >
               <div className="flex justify-between gap-4">
                 <div>
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="font-semibold text-slate-900">
                     {hospital.name}
                   </h3>
                   {hospital.city && (
-                    <p className="text-sm text-blue-600 font-medium">
+                    <p className="text-sm text-emerald-600 font-medium">
                       {hospital.city}
                     </p>
                   )}
-                  <p className="text-sm text-gray-500">{hospital.address}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-slate-500">{hospital.address}</p>
+                  <p className="text-sm text-slate-500">
                     Điện thoại: {hospital.phone} · Email: {hospital.email}
                   </p>
                   {hospital.main_specialty && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-slate-500">
                       Chuyên khoa chính: {hospital.main_specialty}
                     </p>
                   )}
@@ -417,7 +420,7 @@ export default function HospitalManagement() {
                     Sửa
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="danger"
                     size="sm"
                     icon={Trash2}
                     onClick={() => handleDeleteHospital(hospital.id)}
