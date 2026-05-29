@@ -26,8 +26,9 @@ const handleResponse = async (response, defaultErrorMessage) => {
   throw new Error(message);
 };
 
-export const getDoctors = async () => {
-  const response = await fetch(DOCTORS_ENDPOINT, {
+export const getDoctors = async (hospitalId = null) => {
+  const url = hospitalId ? `${DOCTORS_ENDPOINT}?hospitalId=${hospitalId}` : DOCTORS_ENDPOINT;
+  const response = await fetch(url, {
     headers: {
       ...getAuthHeaders(),
     },
@@ -69,4 +70,42 @@ export const deleteDoctor = async (id) => {
     credentials: "include",
   });
   return handleResponse(response, "Không thể xóa bác sĩ");
+};
+
+// --- API Xử lý Đơn ứng tuyển ---
+
+export const getHospitalApplications = async (hospitalId) => {
+  const response = await fetch(`${DOCTORS_ENDPOINT}/hospitals/${hospitalId}/applications`, {
+    headers: {
+      ...getAuthHeaders(),
+    },
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể tải danh sách yêu cầu");
+};
+
+export const updateApplicationStatus = async (id, status, rejection_reason = "") => {
+  const response = await fetch(`${DOCTORS_ENDPOINT}/applications/${id}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ status, rejection_reason }),
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể cập nhật trạng thái yêu cầu");
+};
+
+export const unlinkDoctor = async (id, reason = "") => {
+  const response = await fetch(`${DOCTORS_ENDPOINT}/${id}/unlink`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ reason }),
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể hủy liên kết bác sĩ");
 };

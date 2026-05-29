@@ -24,6 +24,7 @@ import SocialManagement from "./pages/SocialManagement";
 import ReviewManagement from "./pages/ReviewManagement";
 import UserManagement from "./pages/UserManagement";
 import DoctorRequestsManagement from "./pages/DoctorRequestsManagement";
+import HospitalRegistrationRequests from "./pages/HospitalRegistrationRequests";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -128,6 +129,7 @@ const AppRouter = () => {
         <Route path="/review" element={<ReviewManagement />} />
         <Route path="/users" element={<UserManagement />} />
         <Route path="/doctor-requests" element={<DoctorRequestsManagement />} />
+        <Route path="/hospital-registrations" element={<HospitalRegistrationRequests />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
 

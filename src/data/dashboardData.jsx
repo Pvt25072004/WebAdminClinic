@@ -23,6 +23,7 @@ import {
 export const adminNavItems = [
   { label: "Dashboard", Icon: FaHome, active: false, url: "/dashboard" },
   { label: "Hospitals", Icon: FaRegHospital, active: false, url: "/hospital" },
+  { label: "Hospital Regs", Icon: FaRegFileImage, active: false, url: "/hospital-registrations" },
   { label: "Categories", Icon: FaRegListAlt, active: false, url: "/category" },
   { label: "Banners", Icon: FaRegFileImage, active: false, url: "/banner" },
   { label: "News", Icon: FaRegNewspaper, active: false, url: "/news" },
