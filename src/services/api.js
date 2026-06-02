@@ -1,31 +1,9 @@
 // Nếu có VITE_API_BASE_URL (trỏ tới backend trên EC2) thì dùng, ngược lại dùng "/api" để proxy local qua Vite/nginx
-import { getAuthHeaders } from "./http";
+import { getAuthHeaders, handleResponse } from "./http";
 
 import { API_BASE_URL } from "../utils/constants";
 
-const handleResponse = async (response, defaultErrorMessage) => {
-  if (response.ok) {
-    try {
-      return await response.json();
-    } catch {
-      return null;
-    }
-  }
 
-  let message = defaultErrorMessage;
-  try {
-    const errorBody = await response.json();
-    if (errorBody?.message) {
-      message =
-        typeof errorBody.message === "string"
-          ? errorBody.message
-          : errorBody.message.join?.(", ");
-    }
-  } catch {
-    // ignore parse error, use default message
-  }
-  throw new Error(message);
-};
 
 export const login = async (credentials) => {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {

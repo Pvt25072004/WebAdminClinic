@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Button from "../components/Button";
+import Pagination from "../components/Pagination";
 import { ToggleRight, ToggleLeft } from "lucide-react";
 import {
   getDoctors,
@@ -20,6 +21,12 @@ export default function DoctorManagement() {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [doctorForm, setDoctorForm] = useState({
     name: "",
     specialty: "",
@@ -76,8 +83,11 @@ export default function DoctorManagement() {
   const loadDoctors = async () => {
     try {
       setLoadingDoctors(true);
-      const data = await getDoctors(user?.hospital_id);
-      setDoctors(Array.isArray(data) ? data : []);
+      const responseData = await getDoctors(user?.hospital_id, currentPage, limit);
+      const actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
+      setDoctors(actualDoctors);
+      if (responseData?.total) setTotalItems(responseData.total);
+      if (responseData?.totalPages) setTotalPages(responseData.totalPages);
     } catch (e) {
       console.error("Load doctors error:", e);
     } finally {
@@ -164,7 +174,7 @@ export default function DoctorManagement() {
   useEffect(() => {
     void loadDoctors();
     void loadCategories();
-  }, [user?.hospital_id]);
+  }, [user?.hospital_id, currentPage, limit]);
 
   return (
     <div>
@@ -519,7 +529,18 @@ export default function DoctorManagement() {
             </div>
           );
         })}
+        </table>
       </div>
+      
+      {!loadingDoctors && doctors.length > 0 && (
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={totalItems}
+          itemsPerPage={limit}
+        />
+      )}
     </div>
   );
 }

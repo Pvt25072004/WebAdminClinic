@@ -1,4 +1,4 @@
-import { getAuthHeaders } from "./http";
+import { getAuthHeaders, handleResponse } from "./http";
 import { API_BASE_URL } from "../utils/constants";
 const APPOINTMENTS_ENDPOINT = `${API_BASE_URL}/appointments`;
 

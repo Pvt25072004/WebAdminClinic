@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Button from "../components/Button";
+import Pagination from "../components/Pagination";
 import { Plus, Edit3, Trash2, ToggleRight, ToggleLeft, Inbox } from "lucide-react";
 import {
   getUsers,
@@ -12,14 +14,13 @@ import { getHospitals } from "../services/admin.hospitals.api";
 import { useNotification } from "../contexts/NotificationContext";
 
 export default function UserManagement() {
+  const queryClient = useQueryClient();
   const { showSuccess, showError, confirm } = useNotification();
-  const [users, setUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
   
-  const [hospitals, setHospitals] = useState([]);
-  const [loadingHospitals, setLoadingHospitals] = useState(false);
-
   const [roleFilter, setRoleFilter] = useState("all");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const [showForm, setShowForm] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
@@ -32,29 +33,24 @@ export default function UserManagement() {
     role: "admin_hospital",
   });
   
-  const [submitting, setSubmitting] = useState(false);
+  // submitting state is now derived from mutation below
 
-  const loadData = async () => {
-    try {
-      setLoadingUsers(true);
-      setLoadingHospitals(true);
-      const [usersData, hospitalsData] = await Promise.all([
-        getUsers(),
-        getHospitals()
-      ]);
-      setUsers(Array.isArray(usersData) ? usersData : []);
-      setHospitals(Array.isArray(hospitalsData) ? hospitalsData : []);
-    } catch (e) {
-      console.error("Load data error:", e);
-    } finally {
-      setLoadingUsers(false);
-      setLoadingHospitals(false);
-    }
-  };
+  // 1. Fetch Hospitals using React Query
+  const { data: hospitals = [], isLoading: loadingHospitals } = useQuery({
+    queryKey: ["hospitals"],
+    queryFn: getHospitals,
+    select: (data) => (Array.isArray(data) ? data : []),
+  });
 
-  useEffect(() => {
-    void loadData();
-  }, []);
+  // 2. Fetch Users using React Query
+  const { data: usersResponse, isLoading: loadingUsers } = useQuery({
+    queryKey: ["users", currentPage, limit],
+    queryFn: () => getUsers(currentPage, limit),
+  });
+
+  const users = usersResponse?.data ? usersResponse.data : (Array.isArray(usersResponse) ? usersResponse : []);
+  const totalItems = usersResponse?.total || 0;
+  const totalPages = usersResponse?.totalPages || 1;
 
   const visibleUsers = users.filter((u) => {
     if (u.role === "admin") return false; // Không hiển thị admin tổng
@@ -88,18 +84,27 @@ export default function UserManagement() {
     setShowForm(true);
   };
 
-  const handleToggleUser = async (user) => {
-    try {
-      await toggleUserActive(user.id, user.is_active);
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === user.id ? { ...u, is_active: !u.is_active } : u
-        )
-      );
-      showSuccess(`Đã ${user.is_active ? "tạm ngưng" : "kích hoạt"} tài khoản thành công!`);
-    } catch (e) {
-      showError("Lỗi khi cập nhật trạng thái");
-    }
+  // Mutations
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, is_active }) => toggleUserActive(id, is_active),
+    onSuccess: (_, variables) => {
+      showSuccess(`Đã ${variables.is_active ? "tạm ngưng" : "kích hoạt"} tài khoản thành công!`);
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (e) => showError(e.message || "Không thể cập nhật trạng thái"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteUserAdmin,
+    onSuccess: () => {
+      showSuccess("Đã xóa người dùng");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (e) => showError(e.message || "Không thể xóa người dùng"),
+  });
+
+  const handleToggleUser = (user) => {
+    toggleMutation.mutate({ id: user.id, is_active: user.is_active });
   };
 
   const handleDeleteUser = async (id) => {
@@ -109,44 +114,13 @@ export default function UserManagement() {
       { variant: "danger", confirmText: "Xóa" }
     );
     if (!isConfirm) return;
-    
-    try {
-      await deleteUserAdmin(id);
-      setUsers((prev) => prev.filter((u) => u.id !== id));
-      showSuccess("Đã xóa tài khoản thành công!");
-    } catch (e) {
-      showError("Lỗi khi xóa tài khoản");
-    }
+    deleteMutation.mutate(id);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const isHospitalAdmin = formData.role === "admin_hospital";
-    if (!formData.full_name || !formData.email || (!editingUserId && !formData.password) || (isHospitalAdmin && !formData.hospital_id)) {
-      showError("Vui lòng điền đầy đủ các thông tin bắt buộc.");
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const payload = { ...formData };
-      if (isHospitalAdmin) {
-        payload.hospital_id = Number(payload.hospital_id);
-      } else {
-        payload.hospital_id = null; // Reset if not hospital admin
-      }
-      
-      if (editingUserId && !payload.password) {
-        delete payload.password; // Don't send empty password if editing
-      }
-
-      if (editingUserId) {
-        await updateUserAdmin(editingUserId, payload);
-        showSuccess("Cập nhật tài khoản thành công!");
-      } else {
-        await createUserAdmin(payload);
-        showSuccess("Tạo tài khoản thành công!");
-      }
-      
+  const submitMutation = useMutation({
+    mutationFn: ({ id, payload }) => id ? updateUserAdmin(id, payload) : createUserAdmin(payload),
+    onSuccess: (_, variables) => {
+      showSuccess(variables.id ? "Cập nhật tài khoản thành công!" : "Tạo tài khoản thành công!");
       setShowForm(false);
       setEditingUserId(null);
       setFormData({
@@ -157,12 +131,30 @@ export default function UserManagement() {
         hospital_id: "",
         role: "admin_hospital",
       });
-      void loadData();
-    } catch (err) {
-      showError(err.message || "Không thể thực hiện yêu cầu");
-    } finally {
-      setSubmitting(false);
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (e) => showError(e.message || "Không thể thực hiện yêu cầu"),
+  });
+
+  const submitting = submitMutation.isPending;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const isHospitalAdmin = formData.role === "admin_hospital";
+    if (!formData.full_name || !formData.email || (!editingUserId && !formData.password) || (isHospitalAdmin && !formData.hospital_id)) {
+      showError("Vui lòng điền đầy đủ các thông tin bắt buộc.");
+      return;
     }
+    const payload = { ...formData };
+    if (isHospitalAdmin) {
+      payload.hospital_id = Number(payload.hospital_id);
+    } else {
+      payload.hospital_id = null; // Reset if not hospital admin
+    }
+    if (editingUserId && !payload.password) {
+      delete payload.password; // Don't send empty password if editing
+    }
+    submitMutation.mutate({ id: editingUserId, payload });
   };
 
   const handleCancel = () => {
@@ -388,6 +380,16 @@ export default function UserManagement() {
           </tbody>
         </table>
       </div>
+      
+      {!loadingUsers && users.length > 0 && (
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={totalItems}
+          itemsPerPage={limit}
+        />
+      )}
     </div>
   );
 }

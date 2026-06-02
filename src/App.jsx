@@ -12,21 +12,24 @@ import {
   timeOptions,
   transferCards,
 } from "./data/dashboardData";
-import Home from "./pages/Home";
-import PatientManagement from "./pages/PatientManagement";
-import DoctorManagement from "./pages/DoctorManagement";
-import BannerManagement from "./pages/BannerManagement";
-import HospitalManagement from "./pages/HospitalManagement";
-import CategoryManagement from "./pages/CategoryManagement";
-import PaymentManagement from "./pages/PaymentManagement";
-import NewsManagement from "./pages/NewsManagement";
-import SocialManagement from "./pages/SocialManagement";
-import ReviewManagement from "./pages/ReviewManagement";
-import UserManagement from "./pages/UserManagement";
-import DoctorRequestsManagement from "./pages/DoctorRequestsManagement";
-import HospitalRegistrationRequests from "./pages/HospitalRegistrationRequests";
-import Profile from "./pages/Profile";
-import Login from "./pages/Login";
+import React, { Suspense, lazy } from 'react';
+
+// Lazy load các trang để tăng tốc độ tải ứng dụng (Code Splitting)
+const Home = lazy(() => import("./pages/Home"));
+const PatientManagement = lazy(() => import("./pages/PatientManagement"));
+const DoctorManagement = lazy(() => import("./pages/DoctorManagement"));
+const BannerManagement = lazy(() => import("./pages/BannerManagement"));
+const HospitalManagement = lazy(() => import("./pages/HospitalManagement"));
+const CategoryManagement = lazy(() => import("./pages/CategoryManagement"));
+const PaymentManagement = lazy(() => import("./pages/PaymentManagement"));
+const NewsManagement = lazy(() => import("./pages/NewsManagement"));
+const SocialManagement = lazy(() => import("./pages/SocialManagement"));
+const ReviewManagement = lazy(() => import("./pages/ReviewManagement"));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const DoctorRequestsManagement = lazy(() => import("./pages/DoctorRequestsManagement"));
+const HospitalRegistrationRequests = lazy(() => import("./pages/HospitalRegistrationRequests"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Login = lazy(() => import("./pages/Login"));
 import { NotificationProvider } from "./contexts/NotificationContext";
 import {
   BrowserRouter,
@@ -37,6 +40,7 @@ import {
   Outlet,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const AdminLayout = () => {
   return (
@@ -44,7 +48,16 @@ const AdminLayout = () => {
       <Sidebar />
       <main className="ml-[280px] max-w-[1800px] flex-1 p-10 max-xl:p-8 max-lg:ml-20 max-md:p-5">
         <Header />
-        <Outlet />
+        <Suspense fallback={
+          <div className="flex h-[50vh] items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
+              <p className="text-sm font-medium text-slate-500">Đang tải trang...</p>
+            </div>
+          </div>
+        }>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
@@ -106,7 +119,11 @@ const AppRouter = () => {
       {/* Route Login */}
       <Route
         path="/"
-        element={isUserAdmin ? <Navigate to="/dashboard" replace /> : <Login />}
+        element={
+          <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div></div>}>
+            {isUserAdmin ? <Navigate to="/dashboard" replace /> : <Login />}
+          </Suspense>
+        }
       />
 
       {/* Các route yêu cầu quyền Admin, được bao bọc bởi AdminLayout */}
@@ -139,14 +156,29 @@ const AppRouter = () => {
   );
 };
 
+import ErrorBoundary from "./components/ErrorBoundary";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Tránh tự động gọi lại API khi chuyển tab trình duyệt
+      retry: 1, // Chỉ thử lại 1 lần nếu lỗi
+    },
+  },
+});
+
 export default function App() {
   return (
-    <NotificationProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRouter />
-        </BrowserRouter>
-      </AuthProvider>
-    </NotificationProvider>
+    <QueryClientProvider client={queryClient}>
+      <ErrorBoundary>
+        <NotificationProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <AppRouter />
+            </BrowserRouter>
+          </AuthProvider>
+        </NotificationProvider>
+      </ErrorBoundary>
+    </QueryClientProvider>
   );
 }

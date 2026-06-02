@@ -1,33 +1,21 @@
 // Admin Doctors API
-import { getAuthHeaders } from "./http";
+import { getAuthHeaders, handleResponse } from "./http";
 
 import { API_BASE_URL } from "../utils/constants";
 const DOCTORS_ENDPOINT = `${API_BASE_URL}/doctors`;
 
-const handleResponse = async (response, defaultErrorMessage) => {
-  if (response.ok) {
-    try {
-      return await response.json();
-    } catch {
-      return null;
-    }
+
+
+export const getDoctors = async (hospitalId = null, page = 1, limit = 10) => {
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+  if (hospitalId) {
+    queryParams.append("hospitalId", hospitalId.toString());
   }
-
-  let message = defaultErrorMessage;
-  try {
-    const errorBody = await response.json();
-    if (errorBody?.message) {
-      message =
-        typeof errorBody.message === "string"
-          ? errorBody.message
-          : errorBody.message.join?.(", ");
-    }
-  } catch {}
-  throw new Error(message);
-};
-
-export const getDoctors = async (hospitalId = null) => {
-  const url = hospitalId ? `${DOCTORS_ENDPOINT}?hospitalId=${hospitalId}` : DOCTORS_ENDPOINT;
+  const url = `${DOCTORS_ENDPOINT}?${queryParams.toString()}`;
+  
   const response = await fetch(url, {
     headers: {
       ...getAuthHeaders(),
