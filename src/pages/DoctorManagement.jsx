@@ -529,7 +529,6 @@ export default function DoctorManagement() {
             </div>
           );
         })}
-        </table>
       </div>
       
       {!loadingDoctors && doctors.length > 0 && (
