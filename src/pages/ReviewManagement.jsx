@@ -1,53 +1,28 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { getAllReviews } from "../services/reviews.api";
+import { getDoctors } from "../services/admin.doctors.api";
 import Button from "../components/Button";
 import { Shield, Eye } from "lucide-react";
 
 export default function ReviewManagement() {
-  const [adminReviews, setAdminReviews] = useState([]);
-  const [loadingReviewsAdmin, setLoadingReviewsAdmin] = useState(false);
-  const loadAdminReviews = async () => {
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadDoctorsData = async () => {
     try {
-      setLoadingReviewsAdmin(true);
-      const data = await getAllReviews();
-      setAdminReviews(Array.isArray(data) ? data : []);
+      setLoading(true);
+      const res = await getDoctors();
+      // Handle the paginated response
+      setDoctors(res?.data || []);
     } catch (e) {
-      console.error("Load admin reviews error:", e);
+      console.error("Load doctors error:", e);
     } finally {
-      setLoadingReviewsAdmin(false);
+      setLoading(false);
     }
   };
-  useEffect(() => {
-    void loadAdminReviews();
-  }, []);
 
-  const doctorRatings = useMemo(() => {
-    if (!adminReviews || adminReviews.length === 0) return [];
-    
-    const map = new Map();
-    adminReviews.forEach(review => {
-      const doctorId = review.doctor?.id || review.doctor_id;
-      if (!doctorId) return;
-      
-      if (!map.has(doctorId)) {
-        map.set(doctorId, {
-          doctorId,
-          doctorName: review.doctor?.full_name || review.doctor?.name || "Bác sĩ ẩn danh",
-          totalReviews: 0,
-          sumRating: 0
-        });
-      }
-      
-      const item = map.get(doctorId);
-      item.totalReviews++;
-      item.sumRating += (review.rating || 0);
-    });
-    
-    return Array.from(map.values()).map(item => ({
-      ...item,
-      averageRating: (item.sumRating / item.totalReviews).toFixed(1)
-    }));
-  }, [adminReviews]);
+  useEffect(() => {
+    void loadDoctorsData();
+  }, []);
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -70,35 +45,38 @@ export default function ReviewManagement() {
       </div>
 
       <div className="space-y-4">
-        {loadingReviewsAdmin && (
+        {loading && (
           <p className="text-sm text-slate-500">
             Đang tải danh sách đánh giá...
           </p>
         )}
-        {!loadingReviewsAdmin && doctorRatings.length === 0 && (
+        {!loading && doctors.length === 0 && (
           <p className="text-sm text-slate-500">
-            Chưa có đánh giá nào cho bác sĩ.
+            Chưa có thông tin bác sĩ nào.
           </p>
         )}
-        {!loadingReviewsAdmin &&
-          doctorRatings.map((doctorRating) => (
+        {!loading &&
+          doctors
+            .filter((d) => d.review_count > 0) // Chỉ hiển thị bác sĩ đã có đánh giá
+            .sort((a, b) => b.rating - a.rating)
+            .map((doctor) => (
             <div
-              key={doctorRating.doctorId}
+              key={doctor.id}
               className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
             >
               <div className="flex justify-between items-center">
                 <div>
                   <p className="font-semibold text-slate-900">
-                    {doctorRating.doctorName}
+                    {doctor.user?.full_name || "Bác sĩ ẩn danh"}
                   </p>
                   <p className="text-sm text-slate-500">
-                    {doctorRating.totalReviews} đánh giá
+                    {doctor.review_count} đánh giá
                   </p>
                 </div>
                 <div className="text-right">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold text-amber-500">
-                      ⭐ {doctorRating.averageRating}
+                      ⭐ {Number(doctor.rating).toFixed(1)}
                     </span>
                     <span className="text-sm text-slate-500">/ 5.0</span>
                   </div>

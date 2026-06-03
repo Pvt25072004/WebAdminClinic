@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import Button from "../components/Button";
 import { Plus, Edit3, Trash2, Eye, ToggleLeft, ToggleRight, DollarSign, Clock } from "lucide-react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { getAllServicePackages, createServicePackage } from "../services/admin.servicepackages.api";
 import { useNotification } from "../contexts/NotificationContext";
+import { uploadUserImage } from "../services/api";
+import { Image as ImageIcon } from "lucide-react";
 
 export default function ServicePackageManagement() {
   const { showSuccess, showError } = useNotification();
@@ -22,7 +24,32 @@ export default function ServicePackageManagement() {
     duration_minutes: 30,
     is_active: true,
     requires_fasting: false,
+    image_url: "",
   });
+
+  const fileInputRef = useRef(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      const result = await uploadUserImage(file);
+      if (result && result.image_url) {
+        setFormData((prev) => ({
+          ...prev,
+          image_url: result.image_url,
+        }));
+        showSuccess("Tải ảnh thành công!");
+      }
+    } catch (error) {
+      showError("Lỗi tải ảnh: " + error.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -50,6 +77,7 @@ export default function ServicePackageManagement() {
       duration_minutes: 30,
       is_active: true,
       requires_fasting: false,
+      image_url: "",
     });
     setShowForm(true);
   };
@@ -123,7 +151,54 @@ export default function ServicePackageManagement() {
       {showForm ? (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-100 mb-6">
           <h3 className="text-lg font-bold mb-4">Thêm Gói Khám Mới</h3>
+          
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageChange}
+            className="hidden"
+            accept="image/*"
+          />
+
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-24 h-24 rounded-lg bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative group">
+                {formData.image_url ? (
+                  <img
+                    src={formData.image_url}
+                    alt="Package"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <ImageIcon className="w-8 h-8 text-slate-400" />
+                )}
+                {uploadingImage && (
+                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                <div 
+                  className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer transition-all"
+                  onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                >
+                  <span className="text-white text-xs font-medium">Đổi ảnh</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-slate-900 mb-1">Ảnh Gói Khám</h3>
+                <p className="text-xs text-slate-500 mb-2">Ảnh minh họa cho gói khám</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? "Đang tải..." : "Tải ảnh lên"}
+                </Button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Tên gói khám *</label>
@@ -247,11 +322,22 @@ export default function ServicePackageManagement() {
           {!loading && packages.map((pkg) => (
             <div key={pkg.id} className="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
               <div className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-lg text-slate-900 line-clamp-2">{pkg.name}</h3>
-                  <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">
-                    {pkg.code}
-                  </span>
+                <div className="flex items-start gap-4 mb-2">
+                  {pkg.image_url ? (
+                    <img src={pkg.image_url} className="w-12 h-12 rounded-lg object-cover border" alt="" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-slate-100 border flex items-center justify-center shrink-0">
+                      <ImageIcon className="w-5 h-5 text-slate-400" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-lg text-slate-900 line-clamp-2 leading-tight">{pkg.name}</h3>
+                      <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600 ml-2 shrink-0">
+                        {pkg.code}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between mt-4">

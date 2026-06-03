@@ -1,14 +1,6 @@
 import {
-  FaChartLine,
   FaCommentDots,
-  FaCreditCard,
-  FaExchangeAlt,
-  FaHamburger,
   FaHome,
-  FaLifeRing,
-  FaSlidersH,
-  FaTshirt,
-  FaUniversity,
   FaUserCircle,
   FaWallet,
   FaUserInjured,
@@ -51,58 +43,3 @@ export const hospitalAdminNavItems = [
   { label: "Notifications", Icon: FaBell, active: false, url: "/notifications" },
 ];
 
-export const transferCards = [
-  {
-    title: "Digital Payments",
-    amount: "$1,875",
-    Icon: FaCreditCard,
-  },
-  {
-    title: "External Transfers",
-    amount: "$263",
-    Icon: FaExchangeAlt,
-  },
-  {
-    title: "Domestic Transfers",
-    amount: "$394",
-    Icon: FaUniversity,
-  },
-];
-
-export const recentExpenses = [
-  {
-    title: "Dining Out",
-    time: "Today, 14:45",
-    amount: "-$78",
-    type: "negative",
-    Icon: FaHamburger,
-  },
-  {
-    title: "Retail Purchase",
-    time: "Yesterday, 16:08",
-    amount: "-$125",
-    type: "negative",
-    Icon: FaTshirt,
-  },
-];
-
-export const connections = [
-  {
-    title: "Lisa Johnson",
-    time: "Today, 09:35",
-    amount: "+$85",
-    type: "positive",
-    image: "https://i.pravatar.cc/100?img=12",
-  },
-  {
-    title: "Michael Torres",
-    time: "Monday, 17:45",
-    amount: "-$42",
-    type: "negative",
-    image: "https://i.pravatar.cc/100?img=11",
-  },
-];
-
-export const timeOptions = ["Daily", "Weekly", "Monthly", "Annual"];
-
-export const months = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];

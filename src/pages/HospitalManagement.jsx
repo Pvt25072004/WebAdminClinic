@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Building,
   Stethoscope,
@@ -17,6 +17,8 @@ import {
   ToggleRight,
   Home,
 } from "lucide-react";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
 import Button from "../components/Button";
 import {
   getHospitals,
@@ -31,6 +33,7 @@ import {
   deleteCategory,
 } from "../services/admin.categories.api";
 import { useNotification } from "../contexts/NotificationContext";
+import { uploadUserImage } from "../services/api";
 
 export default function HospitalManagement() {
   const { showSuccess, showError, confirm } = useNotification();
@@ -52,7 +55,33 @@ export default function HospitalManagement() {
     main_specialty: "",
     categoryIds: [],
     is_active: true,
+    logo_url: "",
+    description: "",
   });
+
+  const fileInputRef = useRef(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      const result = await uploadUserImage(file);
+      if (result && result.image_url) {
+        setHospitalForm((prev) => ({
+          ...prev,
+          logo_url: result.image_url,
+        }));
+        showSuccess("Tải ảnh thành công!");
+      }
+    } catch (error) {
+      showError("Lỗi tải ảnh: " + error.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -142,6 +171,8 @@ export default function HospitalManagement() {
         ? hospital.categories.map((c) => c.id)
         : [],
       is_active: hospital.is_active ?? true,
+      logo_url: hospital.logo_url || "",
+      description: hospital.description || "",
     });
   };
 
@@ -202,6 +233,8 @@ export default function HospitalManagement() {
       main_specialty: "",
       categoryIds: [],
       is_active: true,
+      logo_url: "",
+      description: "",
     });
   };
 
@@ -241,7 +274,53 @@ export default function HospitalManagement() {
         </div>
 
         {/* Form tạo / sửa bệnh viện */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImageChange}
+          className="hidden"
+          accept="image/*"
+        />
+
         <form onSubmit={handleSubmitHospital} className="mb-6 grid gap-4">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-24 h-24 rounded-lg bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative group">
+              {hospitalForm.logo_url ? (
+                <img
+                  src={hospitalForm.logo_url}
+                  alt="Logo"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Building className="w-8 h-8 text-slate-400" />
+              )}
+              {uploadingImage && (
+                <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              <div 
+                className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer transition-all"
+                onClick={() => !uploadingImage && fileInputRef.current?.click()}
+              >
+                <span className="text-white text-xs font-medium">Đổi ảnh</span>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-slate-900 mb-1">Logo Bệnh viện</h3>
+              <p className="text-xs text-slate-500 mb-2">Ảnh đại diện, tỷ lệ 1:1, dung lượng &lt; 2MB</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? "Đang tải..." : "Tải ảnh lên"}
+              </Button>
+            </div>
+          </div>
+          
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -391,6 +470,19 @@ export default function HospitalManagement() {
               )}
             </div>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Mô tả bệnh viện
+            </label>
+            <ReactQuill
+              theme="snow"
+              value={hospitalForm.description}
+              onChange={(val) =>
+                setHospitalForm((prev) => ({ ...prev, description: val }))
+              }
+              className="bg-white rounded-lg"
+            />
+          </div>
           <div className="flex justify-end gap-2">
             {editingHospital && (
               <Button
@@ -476,7 +568,14 @@ export default function HospitalManagement() {
             >
               <div className="flex justify-between gap-4">
                 <div>
-                  <h3 className="font-semibold text-slate-900">
+                  <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                    {hospital.logo_url ? (
+                      <img src={hospital.logo_url} className="w-8 h-8 rounded-md object-cover border" alt="" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-md bg-slate-100 border flex items-center justify-center">
+                        <Building className="w-4 h-4 text-slate-400" />
+                      </div>
+                    )}
                     {hospital.name}
                   </h3>
                   {hospital.city && (

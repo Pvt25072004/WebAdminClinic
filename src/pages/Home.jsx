@@ -6,13 +6,6 @@ import TransferCard from "../components/TransferCard";
 import AppointmentsChart from "../components/AppointmentsChart";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  connections,
-  months,
-  recentExpenses,
-  timeOptions,
-  transferCards, // We'll keep default as fallback
-} from "../data/dashboardData";
-import {
   FaMoneyBillWave,
   FaHospital,
   FaUsers,
@@ -205,8 +198,8 @@ export default function Home() {
         </section>
 
         <section className="grid grid-cols-2 gap-6 max-xl:grid-cols-1">
-          <TransactionCard title="Danh sách mới nhất" items={stats.recentItems.length ? stats.recentItems : recentExpenses} />
-          <TransactionCard title="Cảnh báo hệ thống" items={stats.alerts.length ? stats.alerts : connections} />
+          <TransactionCard title="Danh sách mới nhất" items={stats.recentItems} />
+          <TransactionCard title="Cảnh báo hệ thống" items={stats.alerts} />
         </section>
       </div>
 

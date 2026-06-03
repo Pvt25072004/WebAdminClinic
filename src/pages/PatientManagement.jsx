@@ -1,19 +1,30 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Button from "../components/Button";
+import Pagination from "../components/Pagination";
 import { ToggleRight, ToggleLeft, Inbox } from "lucide-react";
 import {
   getUsers,
   toggleUserActive,
   deleteUserAdmin,
 } from "../services/admin.users.api";
+
 export default function PatientManagement() {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const loadUsers = async () => {
     try {
       setLoadingUsers(true);
-      const data = await getUsers();
-      setUsers(Array.isArray(data) ? data : []);
+      const responseData = await getUsers(currentPage, limit);
+      const actualUsers = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
+      setUsers(actualUsers);
+      if (responseData?.total) setTotalItems(responseData.total);
+      if (responseData?.totalPages) setTotalPages(responseData.totalPages);
     } catch (e) {
       console.error("Load users error:", e);
     } finally {
@@ -22,7 +33,7 @@ export default function PatientManagement() {
   };
   useEffect(() => {
     void loadUsers();
-  }, []);
+  }, [currentPage, limit]);
   const visibleUsers = users.filter((u) => u.role !== "admin");
   return (
     <div className="xl:col-span-2">
@@ -115,6 +126,16 @@ export default function PatientManagement() {
           </tbody>
         </table>
       </div>
+      
+      {!loadingUsers && users.length > 0 && (
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={totalItems}
+          itemsPerPage={limit}
+        />
+      )}
     </div>
   );
 }

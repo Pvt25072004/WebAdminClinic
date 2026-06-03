@@ -5,13 +5,7 @@ import SavingsCard from "./components/SavingsCard";
 import Sidebar from "./components/Sidebar";
 import TransactionCard from "./components/TransactionCard";
 import TransferCard from "./components/TransferCard";
-import {
-  connections,
-  months,
-  recentExpenses,
-  timeOptions,
-  transferCards,
-} from "./data/dashboardData";
+
 import React, { Suspense, lazy } from 'react';
 
 // Lazy load các trang để tăng tốc độ tải ứng dụng (Code Splitting)
@@ -95,6 +89,23 @@ const ProtectedAdminRoute = ({ children }) => {
   return children;
 };
 
+const RequireSuperAdmin = ({ children }) => {
+  const { user } = useAuth();
+  const normalizedRole = (
+    user?.role ||
+    user?.userRole ||
+    user?.user_role ||
+    user?.roles?.[0] ||
+    "patient"
+  ).toLowerCase();
+
+  if (normalizedRole !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
 const AppRouter = () => {
   const { isAuthenticated, user, isAuthReady } = useAuth();
 
@@ -141,20 +152,20 @@ const AppRouter = () => {
         <Route path="/dashboard" element={<Home />} />
         <Route path="/patient" element={<PatientManagement />} />
         <Route path="/doctor" element={<DoctorManagement />} />
-        <Route path="/banner" element={<BannerManagement />} />
-        <Route path="/hospital" element={<HospitalManagement />} />
-        <Route path="/category" element={<CategoryManagement />} />
+        <Route path="/banner" element={<RequireSuperAdmin><BannerManagement /></RequireSuperAdmin>} />
+        <Route path="/hospital" element={<RequireSuperAdmin><HospitalManagement /></RequireSuperAdmin>} />
+        <Route path="/category" element={<RequireSuperAdmin><CategoryManagement /></RequireSuperAdmin>} />
         <Route path="/service-packages" element={<ServicePackageManagement />} />
         <Route path="/schedules" element={<SchedulesManagement />} />
         <Route path="/notifications" element={<NotificationManagement />} />
         <Route path="/appointment" element={<AppointmentManagement />} />
-        <Route path="/payment" element={<PaymentManagement />} />
-        <Route path="/news" element={<NewsManagement />} />
-        <Route path="/social" element={<SocialManagement />} />
+        <Route path="/payment" element={<RequireSuperAdmin><PaymentManagement /></RequireSuperAdmin>} />
+        <Route path="/news" element={<RequireSuperAdmin><NewsManagement /></RequireSuperAdmin>} />
+        <Route path="/social" element={<RequireSuperAdmin><SocialManagement /></RequireSuperAdmin>} />
         <Route path="/review" element={<ReviewManagement />} />
-        <Route path="/users" element={<UserManagement />} />
+        <Route path="/users" element={<RequireSuperAdmin><UserManagement /></RequireSuperAdmin>} />
         <Route path="/doctor-requests" element={<DoctorRequestsManagement />} />
-        <Route path="/hospital-registrations" element={<HospitalRegistrationRequests />} />
+        <Route path="/hospital-registrations" element={<RequireSuperAdmin><HospitalRegistrationRequests /></RequireSuperAdmin>} />
         <Route path="/profile" element={<Profile />} />
       </Route>
 
