@@ -22,7 +22,6 @@ import "react-quill-new/dist/quill.snow.css";
 import Button from "../components/Button";
 import {
   getHospitals,
-  createHospital,
   updateHospital,
   deleteHospital,
 } from "../services/admin.hospitals.api";
@@ -46,6 +45,7 @@ export default function HospitalManagement() {
   const [hospitals, setHospitals] = useState([]);
   const [loadingHospitals, setLoadingHospitals] = useState(false);
   const [editingHospital, setEditingHospital] = useState(null);
+  const [viewingHospital, setViewingHospital] = useState(null);
   const [hospitalForm, setHospitalForm] = useState({
     name: "",
     address: "",
@@ -197,8 +197,7 @@ export default function HospitalManagement() {
         await updateHospital(editingHospital.id, payload);
         showSuccess("Cập nhật bệnh viện thành công");
       } else {
-        await createHospital(payload);
-        showSuccess("Tạo bệnh viện thành công");
+        showError("Tính năng tạo mới bệnh viện đã được chuyển sang quy trình phê duyệt đối tác.");
       }
       resetForm();
       void loadHospitals();
@@ -263,17 +262,18 @@ export default function HospitalManagement() {
               Thêm/Sửa/Xóa thông tin cơ sở y tế
             </p>
           </div>
-          <Button
-            size="sm"
-            onClick={resetForm}
-            variant={editingHospital ? "secondary" : "primary"}
-            className={!editingHospital ? "bg-slate-100 text-slate-700 hover:bg-slate-200" : ""}
-          >
-            {editingHospital ? "Hủy chỉnh sửa" : "Làm mới Form"}
-          </Button>
+          {editingHospital && (
+            <Button
+              size="sm"
+              onClick={resetForm}
+              variant="secondary"
+            >
+              Hủy chỉnh sửa
+            </Button>
+          )}
         </div>
 
-        {/* Form tạo / sửa bệnh viện */}
+        {/* Form sửa bệnh viện (Chỉ hiện khi Edit) */}
         <input
           type="file"
           ref={fileInputRef}
@@ -282,8 +282,10 @@ export default function HospitalManagement() {
           accept="image/*"
         />
 
-        <form onSubmit={handleSubmitHospital} className="mb-6 grid gap-4">
-          <div className="flex items-center gap-4 mb-4">
+        {editingHospital && (
+          <form onSubmit={handleSubmitHospital} className="mb-6 grid gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-800 border-b pb-3">Cập nhật thông tin Bệnh viện</h3>
+            <div className="flex items-center gap-4 mb-4">
             <div className="w-24 h-24 rounded-lg bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative group">
               {hospitalForm.logo_url ? (
                 <img
@@ -495,10 +497,11 @@ export default function HospitalManagement() {
               </Button>
             )}
             <Button type="submit" variant="primary" size="sm">
-              {editingHospital ? "Cập nhật bệnh viện" : "Tạo bệnh viện"}
+              Lưu thay đổi
             </Button>
           </div>
         </form>
+        )}
 
         {/* Filters */}
         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex flex-wrap gap-4 items-end">
@@ -613,6 +616,14 @@ export default function HospitalManagement() {
                     <Button
                       variant="outline"
                       size="sm"
+                      icon={Eye}
+                      onClick={() => setViewingHospital(hospital)}
+                    >
+                      Xem
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       icon={Edit3}
                       onClick={() => handleEditHospital(hospital)}
                     >
@@ -632,6 +643,108 @@ export default function HospitalManagement() {
             </div>
           ))}
         </div>
+
+        {/* Modal Xem chi tiết Bệnh viện */}
+        {viewingHospital && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
+                <h3 className="text-xl font-semibold text-slate-800">Thông tin cơ sở y tế</h3>
+                <button 
+                  onClick={() => setViewingHospital(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors"
+                >
+                  <Eye className="w-5 h-5 hidden" />
+                  <span className="text-xl font-bold leading-none">&times;</span>
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto">
+                <div className="flex items-start gap-6 mb-8">
+                  <div className="w-24 h-24 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-sm flex items-center justify-center p-1">
+                    {viewingHospital.logo_url ? (
+                      <img src={viewingHospital.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                    ) : (
+                      <Building className="w-10 h-10 text-slate-300" />
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="text-2xl font-bold text-slate-900 mb-1">{viewingHospital.name}</h4>
+                    <div className="flex items-center gap-2 mb-3">
+                      {(viewingHospital.is_active ?? true) ? (
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold uppercase tracking-wide flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Đang hoạt động
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold uppercase tracking-wide flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-rose-500"></span> Đang khóa
+                        </span>
+                      )}
+                      {viewingHospital.main_specialty && (
+                        <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold uppercase tracking-wide">
+                          {viewingHospital.main_specialty}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-2">
+                      <Home className="w-4 h-4" /> {viewingHospital.address}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Liên hệ</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 text-sm">Điện thoại:</span>
+                        <span className="font-medium text-slate-900">{viewingHospital.phone || 'Chưa cập nhật'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 text-sm">Email:</span>
+                        <span className="font-medium text-slate-900">{viewingHospital.email || 'Chưa cập nhật'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 text-sm">Khu vực:</span>
+                        <span className="font-medium text-slate-900">{viewingHospital.city || 'Chưa cập nhật'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Chuyên khoa áp dụng</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {viewingHospital.categories && viewingHospital.categories.length > 0 ? (
+                        viewingHospital.categories.map(cat => (
+                          <span key={cat.id} className="px-2 py-1 bg-white border border-slate-200 text-slate-700 text-xs rounded-md shadow-sm">
+                            {cat.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-sm text-slate-400 italic">Chưa có chuyên khoa nào</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {viewingHospital.description && (
+                  <div className="border-t border-slate-100 pt-6">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Giới thiệu Bệnh viện</p>
+                    <div 
+                      className="text-sm text-slate-700 prose prose-sm max-w-none bg-slate-50 p-4 rounded-xl border border-slate-100"
+                      dangerouslySetInnerHTML={{ __html: viewingHospital.description }}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-2">
+                <Button variant="outline" onClick={() => handleEditHospital(viewingHospital)}>Chỉnh sửa</Button>
+                <Button onClick={() => setViewingHospital(null)}>Đóng</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

@@ -40,6 +40,7 @@ export const hospitalAdminNavItems = [
   { label: "Schedules", Icon: FaRegListAlt, active: false, url: "/schedules" },
   { label: "Reviews", Icon: FaCommentDots, active: false, url: "/review" },
   { label: "Requests", Icon: FaRegFileImage, active: false, url: "/doctor-requests" },
+  { label: "Payments", Icon: FaWallet, active: false, url: "/payment" },
   { label: "Notifications", Icon: FaBell, active: false, url: "/notifications" },
 ];
 

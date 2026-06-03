@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Button from "../components/Button";
 import Pagination from "../components/Pagination";
-import { ToggleRight, ToggleLeft } from "lucide-react";
+import { ToggleRight, ToggleLeft, Eye, X, FileText } from "lucide-react";
 import {
   getDoctors,
   createDoctor,
@@ -21,6 +21,7 @@ export default function DoctorManagement() {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -502,6 +503,14 @@ export default function DoctorManagement() {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
+                    title="Xem chi tiết"
+                    className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                    onClick={() => setSelectedDoctor(doctor)}
+                  >
+                    <Eye size={18} />
+                  </button>
+                  <button
+                    type="button"
                     className="flex items-center gap-1 text-sm text-slate-600"
                     onClick={() => handleToggleDoctor(doctor)}
                   >
@@ -539,6 +548,137 @@ export default function DoctorManagement() {
           totalItems={totalItems}
           itemsPerPage={limit}
         />
+      )}
+
+      {/* Modal chi tiết bác sĩ */}
+      {selectedDoctor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h3 className="text-lg font-semibold text-slate-900">Thông tin chi tiết Bác sĩ</h3>
+              <button
+                onClick={() => setSelectedDoctor(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 sm:p-6 overflow-y-auto">
+              <div className="flex flex-col sm:flex-row gap-6 mb-8">
+                <div className="shrink-0 mx-auto sm:mx-0">
+                  <div className="w-24 h-24 rounded-full bg-slate-100 border-4 border-white shadow-md overflow-hidden flex items-center justify-center">
+                    {selectedDoctor.user?.avatar_url ? (
+                      <img src={selectedDoctor.user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-3xl text-slate-300 font-medium">
+                        {(selectedDoctor.user?.full_name || "BS")?.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex-1 text-center sm:text-left space-y-1">
+                  <h4 className="text-xl font-bold text-slate-900">
+                    {selectedDoctor.user?.full_name || "Chưa cập nhật tên"}
+                  </h4>
+                  <p className="text-emerald-600 font-medium">
+                    {selectedDoctor.category?.name ? `Chuyên khoa: ${selectedDoctor.category.name}` : "Chưa cập nhật chuyên khoa"}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-2 text-sm text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                      Bằng cấp: <strong className="text-slate-700">{selectedDoctor.degree || "Chưa cập nhật"}</strong>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                      Kinh nghiệm: <strong className="text-slate-700">{selectedDoctor.experience_years ? `${selectedDoctor.experience_years} năm` : "Chưa cập nhật"}</strong>
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-500">
+                    Trạng thái: <strong className={selectedDoctor.verification_status === 'active' ? "text-emerald-600" : "text-amber-600"}>{selectedDoctor.verification_status === 'active' ? 'Đang hoạt động' : 'Tạm khóa / Chờ duyệt'}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-6 mb-6">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <h5 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-emerald-500 rounded-full"></span>
+                    Thông tin liên hệ
+                  </h5>
+                  <div className="space-y-2 text-sm">
+                    <p className="flex items-center justify-between">
+                      <span className="text-slate-500">Email:</span>
+                      <span className="font-medium text-slate-900">{selectedDoctor.user?.email || "Chưa cập nhật"}</span>
+                    </p>
+                    <p className="flex items-center justify-between">
+                      <span className="text-slate-500">Số điện thoại:</span>
+                      <span className="font-medium text-slate-900">{selectedDoctor.user?.phone || "Chưa cập nhật"}</span>
+                    </p>
+                    <p className="flex items-center justify-between">
+                      <span className="text-slate-500">Giới tính:</span>
+                      <span className="font-medium text-slate-900">
+                        {selectedDoctor.user?.gender === 'male' ? 'Nam' : selectedDoctor.user?.gender === 'female' ? 'Nữ' : 'Khác'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <h5 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
+                    Hồ sơ pháp lý
+                  </h5>
+                  <div className="space-y-2 text-sm">
+                    <p className="flex flex-col gap-1">
+                      <span className="text-slate-500">Chứng chỉ hành nghề:</span>
+                      <span className="font-medium text-slate-900">{selectedDoctor.license_number || "Chưa cập nhật"}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h5 className="text-sm font-semibold text-slate-900 mb-2">Giới thiệu bản thân</h5>
+                <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[80px]">
+                  {selectedDoctor.description || "Chưa có thông tin giới thiệu."}
+                </p>
+              </div>
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-900 mb-3">Tài liệu đính kèm</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { label: "Giấy phép", url: selectedDoctor.license_file },
+                    { label: "Chứng chỉ", url: selectedDoctor.certificate_file },
+                    { label: "CV / Hồ sơ", url: selectedDoctor.cv_file }
+                  ].map((doc, idx) => (
+                    <div key={idx} className="border border-slate-200 rounded-lg p-3 flex items-center justify-between hover:border-emerald-200 transition-colors bg-white">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <FileText size={16} className="text-slate-400 shrink-0" />
+                        <span className="text-sm font-medium text-slate-700 truncate">{doc.label}</span>
+                      </div>
+                      {doc.url ? (
+                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:text-emerald-700 font-medium shrink-0 ml-2 bg-emerald-50 px-2 py-1 rounded">
+                          Xem
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400 shrink-0 ml-2 italic">Trống</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <Button variant="secondary" onClick={() => setSelectedDoctor(null)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

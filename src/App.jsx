@@ -159,7 +159,7 @@ const AppRouter = () => {
         <Route path="/schedules" element={<SchedulesManagement />} />
         <Route path="/notifications" element={<NotificationManagement />} />
         <Route path="/appointment" element={<AppointmentManagement />} />
-        <Route path="/payment" element={<RequireSuperAdmin><PaymentManagement /></RequireSuperAdmin>} />
+        <Route path="/payment" element={<PaymentManagement />} />
         <Route path="/news" element={<RequireSuperAdmin><NewsManagement /></RequireSuperAdmin>} />
         <Route path="/social" element={<RequireSuperAdmin><SocialManagement /></RequireSuperAdmin>} />
         <Route path="/review" element={<ReviewManagement />} />
