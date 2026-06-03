@@ -23,7 +23,7 @@ import { useEffect, useState } from "react";
 import { getHospitals } from "../services/admin.hospitals.api";
 import { getUsers } from "../services/admin.users.api";
 import { getDoctors } from "../services/admin.doctors.api";
-import { getAllPayments } from "../services/admin.payments.api";
+import { getAllPayments, getDashboardStats } from "../services/admin.payments.api";
 import { getCategories } from "../services/admin.categories.api";
 import { getAllAppointments } from "../services/admin.appointments.api";
 import { useNavigate } from "react-router-dom";
@@ -56,13 +56,14 @@ export default function Home() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [hospitals, users, doctors, payments, categories, appointments] = await Promise.all([
+        const [hospitals, users, doctors, payments, categories, appointments, statsData] = await Promise.all([
           getHospitals().catch(() => []),
           getUsers().catch(() => []),
           getDoctors().catch(() => []),
           getAllPayments().catch(() => []),
           getCategories().catch(() => []),
-          getAllAppointments().catch(() => [])
+          getAllAppointments().catch(() => []),
+          getDashboardStats().catch(() => null)
         ]);
 
         const totalHospitals = Array.isArray(hospitals) ? hospitals.length : 0;
@@ -76,11 +77,9 @@ export default function Home() {
         const paymentsArray = Array.isArray(payments) ? payments : [];
         const alerts = [];
 
-        paymentsArray.forEach(p => {
-          if (p.status === 'COMPLETED' || p.status === 'SUCCESS' || p.status === 'PAID' || p.status === 'SUCCESSFUL' || p.status === 'Đã thanh toán' || p.amount) {
-            totalRevenue += Number(p.amount || p.total_amount || p.price || 0);
-          }
-        });
+        if (statsData) {
+          totalRevenue = statsData.totalRevenue || totalRevenue;
+        }
 
         const recentItems = [];
         const formatTime = (dateString) => {
@@ -139,6 +138,7 @@ export default function Home() {
           hospitalsData: Array.isArray(hospitals) ? hospitals : [],
           recentItems,
           alerts,
+          revenueChart: statsData?.revenueChart || [],
           loading: false,
         });
       } catch (err) {
@@ -211,7 +211,7 @@ export default function Home() {
       </div>
 
       <aside className="flex flex-col gap-8">
-        <SavingsCard timeOptions={["Daily", "Weekly", "Monthly", "Yearly"]} months={[]} paymentsData={stats.paymentsData} />
+        <SavingsCard timeOptions={["Daily", "Weekly", "Monthly", "Yearly"]} chartData={stats.revenueChart} paymentsData={stats.paymentsData} />
         <AppointmentsChart appointments={stats.totalAppointments > 0 ? stats.appointmentsData : []} hospitals={stats.hospitalsData} />
       </aside>
     </div>

@@ -16,6 +16,21 @@ export const getCategories = async () => {
   return handleResponse(response, "Không thể tải danh sách chuyên khoa");
 };
 
+export const uploadCategoryImage = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${CATEGORIES_ENDPOINT}/upload`, {
+    method: "POST",
+    headers: {
+      ...getAuthHeaders(),
+    },
+    body: formData,
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể upload ảnh chuyên khoa");
+};
+
 export const createCategory = async (payload) => {
   const response = await fetch(CATEGORIES_ENDPOINT, {
     method: "POST",

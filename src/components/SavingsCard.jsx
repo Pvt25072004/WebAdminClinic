@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-export default function SavingsCard({ timeOptions, months, paymentsData = [] }) {
+export default function SavingsCard({ timeOptions, paymentsData = [], chartData = [] }) {
   const [activeTime, setActiveTime] = useState(timeOptions[2] || "Monthly");
-  const [activeMonth, setActiveMonth] = useState(months[0] || "Oct");
 
   // Calculate total revenue from real data
   const calculatedTotal = useMemo(() => {
@@ -11,7 +11,7 @@ export default function SavingsCard({ timeOptions, months, paymentsData = [] }) 
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     paymentsData.forEach(p => {
-      if (p.status === 'COMPLETED' || p.status === 'SUCCESS' || p.status === 'PAID' || p.status === 'SUCCESSFUL' || p.status === 'Đã thanh toán' || p.amount) {
+      if (p.status === 'COMPLETED' || p.status === 'SUCCESS' || p.status === 'PAID' || p.status === 'SUCCESSFUL' || p.status === 'Đã thanh toán' || p.amount || p.payment_status === 'completed') {
         const pDateStr = p.created_at || p.createdAt || p.payment_date || p.paymentDate;
         let pDate = new Date(); // fallback to now if no date
         if (pDateStr) {
@@ -22,7 +22,6 @@ export default function SavingsCard({ timeOptions, months, paymentsData = [] }) 
         const amt = Number(p.amount || p.total_amount || p.price || 0);
 
         if (activeTime === "Daily") {
-          // Check if same day
           if (pDate.getFullYear() === now.getFullYear() && pDate.getMonth() === now.getMonth() && pDate.getDate() === now.getDate()) {
             total += amt;
           }
@@ -53,12 +52,12 @@ export default function SavingsCard({ timeOptions, months, paymentsData = [] }) 
   const formattedTotal = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(calculatedTotal);
 
   return (
-    <section className="rounded-[18px] bg-white p-8 shadow-card">
+    <section className="rounded-[18px] bg-white p-8 shadow-sm border border-slate-100">
       <h3 className="mb-4 flex items-center text-[17px] text-[#6c7380] before:mr-2.5 before:h-2 before:w-2 before:rounded-full before:bg-emerald-500 before:content-['']">
         Doanh thu ({activeTime})
       </h3>
 
-      <div className="relative mb-6 inline-block bg-gradient-to-br from-emerald-500 to-[#6a85f1] bg-clip-text text-[40px] font-extrabold text-transparent after:absolute after:bottom-0 after:left-1 after:h-[3px] after:w-10 after:rounded after:bg-gradient-to-br after:from-emerald-500 after:to-[#6a85f1] max-md:text-[32px]">
+      <div className="relative mb-6 inline-block bg-gradient-to-br from-emerald-500 to-[#6a85f1] bg-clip-text text-[40px] font-extrabold text-transparent max-md:text-[32px]">
         {formattedTotal}
       </div>
 
@@ -70,7 +69,7 @@ export default function SavingsCard({ timeOptions, months, paymentsData = [] }) 
             className={[
               "whitespace-nowrap rounded-full px-[18px] py-2 text-sm font-medium transition duration-300 hover:text-emerald-500 max-sm:px-3",
               activeTime === option
-                ? "bg-emerald-500 font-semibold text-white shadow-[0_5px_10px_rgba(16,185,129,0.3)] hover:text-white"
+                ? "bg-emerald-500 font-semibold text-white shadow-md hover:text-white"
                 : "text-[#6c7380]",
             ].join(" ")}
           >
@@ -79,53 +78,37 @@ export default function SavingsCard({ timeOptions, months, paymentsData = [] }) 
         ))}
       </div>
 
-      <div className="-mx-4 h-[200px]">
-        <svg className="h-full w-full overflow-visible" viewBox="0 0 300 100" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="gradientFill" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#4270F4" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#4270F4" stopOpacity="0.1" />
-            </linearGradient>
-          </defs>
-
-          <path
-            d="M0,80 C20,70 40,30 60,60 C80,90 100,40 120,30 C140,20 160,50 180,20 C200,30 220,60 240,80 C260,60 280,40 300,60"
-            fill="none"
-            stroke="#4270F4"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="drop-shadow-[0_5px_5px_rgba(16,185,129,0.2)]"
-          />
-
-          <path
-            d="M0,80 C20,70 40,30 60,60 C80,90 100,40 120,30 C140,20 160,50 180,20 C200,30 220,60 240,80 C260,60 280,40 300,60 L300,100 L0,100 Z"
-            fill="url(#gradientFill)"
-            opacity="0.25"
-          />
-
-          <circle cx="180" cy="20" r="6" fill="#4270F4" stroke="#ffffff" strokeWidth="3" />
-        </svg>
+      <div className="-mx-4 h-[240px] mt-4">
+        {chartData && chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} dy={10} />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 12, fill: '#94a3b8' }}
+                tickFormatter={(value) => `${value / 1000000}M`}
+                width={60}
+              />
+              <Tooltip 
+                formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)}
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+              />
+              <Area type="monotone" dataKey="total" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-slate-400 text-sm">
+            Chưa có dữ liệu biểu đồ
+          </div>
+        )}
       </div>
-
-      {months && months.length > 0 && (
-        <div className="mt-4 flex justify-between px-2.5">
-          {months.map((month) => (
-            <button
-              key={month}
-              onClick={() => setActiveMonth(month)}
-              className={[
-                "relative rounded-full px-2.5 py-1 text-sm font-medium transition duration-300 hover:bg-[#edf0fb] hover:text-emerald-500",
-                activeMonth === month
-                  ? "bg-[#edf0fb] font-semibold text-emerald-500 after:absolute after:-top-[50px] after:left-1/2 after:h-3 after:w-3 after:-translate-x-1/2 after:rounded-full after:border-[3px] after:border-white after:bg-emerald-500 after:shadow-[0_0_10px_rgba(16,185,129,0.5)] after:content-['']"
-                  : "text-[#6c7380]",
-              ].join(" ")}
-            >
-              {month}
-            </button>
-          ))}
-        </div>
-      )}
     </section>
   );
 }

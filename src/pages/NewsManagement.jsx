@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import Button from "../components/Button";
 import { Plus, Edit3, Trash2, ToggleRight, ToggleLeft, RefreshCw, Eye } from "lucide-react";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
 import {
   getNews,
   createNews,

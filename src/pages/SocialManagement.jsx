@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import Button from "../components/Button";
 import { Edit3, Image as ImageIcon, Camera, Link, Hospital } from "lucide-react";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
 import {
   getFanpages,
   getFanpagesByHospital,

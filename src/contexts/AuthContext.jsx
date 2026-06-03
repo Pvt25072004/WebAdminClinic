@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }) => {
         fullName: userData.fullName || userData.full_name || "",
         role:
           userData.role || userData.userRole || userData.user_role || "patient",
+        hospital_id: userData.hospital_id || userData.hospital?.id || null,
       };
 
       setUser(normalizedUser);
@@ -174,6 +175,7 @@ export const AuthProvider = ({ children }) => {
         updatedFromApi.user_role ||
         user.role ||
         "patient",
+      hospital_id: updatedFromApi.hospital_id || updatedFromApi.hospital?.id || user.hospital_id || null,
     };
 
     setUser(normalizedUser);

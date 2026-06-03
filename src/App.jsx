@@ -22,6 +22,10 @@ const BannerManagement = lazy(() => import("./pages/BannerManagement"));
 const HospitalManagement = lazy(() => import("./pages/HospitalManagement"));
 const CategoryManagement = lazy(() => import("./pages/CategoryManagement"));
 const PaymentManagement = lazy(() => import("./pages/PaymentManagement"));
+const AppointmentManagement = lazy(() => import("./pages/AppointmentManagement"));
+const ServicePackageManagement = lazy(() => import("./pages/ServicePackageManagement"));
+const SchedulesManagement = lazy(() => import("./pages/SchedulesManagement"));
+const NotificationManagement = lazy(() => import("./pages/NotificationManagement"));
 const NewsManagement = lazy(() => import("./pages/NewsManagement"));
 const SocialManagement = lazy(() => import("./pages/SocialManagement"));
 const ReviewManagement = lazy(() => import("./pages/ReviewManagement"));
@@ -140,6 +144,10 @@ const AppRouter = () => {
         <Route path="/banner" element={<BannerManagement />} />
         <Route path="/hospital" element={<HospitalManagement />} />
         <Route path="/category" element={<CategoryManagement />} />
+        <Route path="/service-packages" element={<ServicePackageManagement />} />
+        <Route path="/schedules" element={<SchedulesManagement />} />
+        <Route path="/notifications" element={<NotificationManagement />} />
+        <Route path="/appointment" element={<AppointmentManagement />} />
         <Route path="/payment" element={<PaymentManagement />} />
         <Route path="/news" element={<NewsManagement />} />
         <Route path="/social" element={<SocialManagement />} />
