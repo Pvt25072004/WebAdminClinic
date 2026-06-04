@@ -586,7 +586,6 @@ export default function HospitalManagement() {
         </div>
 
         <div className="space-y-4">
-        <div className="space-y-4">
           {loadingHospitals && <CardSkeleton count={4} />}
           {!loadingHospitals && filteredHospitals.length === 0 && (
             <div className="bg-white border border-slate-100 rounded-xl">
