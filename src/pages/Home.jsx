@@ -11,6 +11,7 @@ import {
   FaUsers,
   FaCalendarCheck,
   FaStethoscope,
+  FaUser,
 } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import { getHospitals } from "../services/admin.hospitals.api";
@@ -43,6 +44,7 @@ export default function Home() {
     hospitalsData: [],
     recentItems: [],
     alerts: [],
+    recentAppointments: [],
     loading: true,
   });
 
@@ -59,9 +61,9 @@ export default function Home() {
           getDashboardStats().catch(() => null)
         ]);
 
-        const totalHospitals = Array.isArray(hospitals) ? hospitals.length : 0;
-        const countUsers = Array.isArray(users) ? users.length : 0;
-        const countDoctors = Array.isArray(doctors) ? doctors.length : 0;
+        const totalHospitals = Array.isArray(hospitals) ? hospitals.length : (hospitals?.total || 0);
+        const countUsers = users?.total ?? (Array.isArray(users?.data) ? users.data.length : (Array.isArray(users) ? users.length : 0));
+        const countDoctors = doctors?.total ?? (Array.isArray(doctors?.data) ? doctors.data.length : (Array.isArray(doctors) ? doctors.length : 0));
         const totalUsers = countUsers + countDoctors;
         const totalCategories = Array.isArray(categories) ? categories.length : 0;
         const totalAppointments = Array.isArray(appointments) ? appointments.length : 0;
@@ -83,40 +85,54 @@ export default function Home() {
         };
 
         if (Array.isArray(hospitals) && hospitals.length > 0) {
-          const sortedHospitals = [...hospitals].sort((a,b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0));
-          sortedHospitals.forEach(h => {
+          const sortedHospitals = [...hospitals]
+            .sort((a,b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+            .slice(0, 5);
+          sortedHospitals.forEach((h, index) => {
             recentItems.push({
-              title: "Bệnh viện mới: " + (h.name || "BV"),
+              title: h.name || "BV Mới",
               time: formatTime(h.created_at || h.createdAt),
-              amount: "Mới",
+              amount: index === 0 ? "Mới nhất" : "",
               type: "positive",
-              Icon: FaHospital
+              Icon: FaHospital,
+              onClick: () => navigate("/hospital", { state: { selectedHospitalId: h.id } })
             });
           });
         }
 
-        if (Array.isArray(hospitals)) {
-          const sortedHospitalsByUpdate = [...hospitals]
-            .sort((a,b) => new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt || 0) - new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt || 0));
-          sortedHospitalsByUpdate.forEach(h => {
-            const timeStr = formatTime(h.updated_at || h.updatedAt || h.created_at || h.createdAt);
-            if (h.is_active === false) {
-              alerts.push({
-                title: h.name,
-                time: "Khóa lúc: " + timeStr,
-                amount: "Khóa",
-                type: "negative",
-                image: "https://i.pravatar.cc/150?u=" + h.id
-              });
-            } else {
-              alerts.push({
-                title: h.name,
-                time: "Hoạt động: " + timeStr,
-                amount: "Active",
-                type: "positive",
-                image: "https://i.pravatar.cc/150?u=" + h.id
-              });
-            }
+        const usersList = Array.isArray(users) ? users : (Array.isArray(users?.data) ? users.data : []);
+        if (usersList.length > 0) {
+          const sortedUsers = [...usersList]
+            .sort((a,b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+            .slice(0, 5);
+          sortedUsers.forEach((u, index) => {
+            alerts.push({
+              title: u.full_name || u.name || u.username || "Người dùng",
+              time: formatTime(u.created_at || u.createdAt),
+              amount: index === 0 ? "Mới nhất" : "",
+              type: "positive",
+              isAvatar: true,
+              image: u.avatar_url || "",
+              Icon: FaUser,
+              onClick: () => navigate("/users", { state: { selectedUserId: u.id } })
+            });
+          });
+        }
+
+        const recentAppointments = [];
+        if (normalizedRole === "admin_hospital" && Array.isArray(appointments)) {
+          const sortedAppointments = [...appointments]
+            .sort((a,b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+            .slice(0, 5);
+          sortedAppointments.forEach((a, index) => {
+            recentAppointments.push({
+              title: a.user?.full_name || "Bệnh nhân",
+              time: formatTime(a.created_at || a.createdAt),
+              amount: a.status === "pending" ? "Chờ xác nhận" : "Đã duyệt",
+              type: a.status === "pending" ? "negative" : "positive",
+              Icon: FaCalendarCheck,
+              onClick: () => navigate("/schedules")
+            });
           });
         }
 
@@ -131,6 +147,7 @@ export default function Home() {
           hospitalsData: Array.isArray(hospitals) ? hospitals : [],
           recentItems,
           alerts,
+          recentAppointments,
           revenueChart: statsData?.revenueChart || [],
           loading: false,
         });
@@ -198,8 +215,17 @@ export default function Home() {
         </section>
 
         <section className="grid grid-cols-2 gap-6 max-xl:grid-cols-1">
-          <TransactionCard title="Danh sách mới nhất" items={stats.recentItems} />
-          <TransactionCard title="Cảnh báo hệ thống" items={stats.alerts} />
+          {normalizedRole === "admin" ? (
+            <>
+              <TransactionCard title="Danh sách bệnh viện mới nhất" items={stats.recentItems} />
+              <TransactionCard title="Danh sách người dùng đăng ký mới nhất" items={stats.alerts} />
+            </>
+          ) : (
+            <>
+              <TransactionCard title="Bệnh nhân mới (Hệ thống)" items={stats.alerts} />
+              <TransactionCard title="Lịch hẹn mới nhất" items={stats.recentAppointments} />
+            </>
+          )}
         </section>
       </div>
 

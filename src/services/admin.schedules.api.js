@@ -38,3 +38,16 @@ export const approveSchedule = async (id) => {
   });
   return handleResponse(response, "Không thể duyệt lịch biểu");
 };
+
+export const updateScheduleStatus = async (id, isAvailable) => {
+  const response = await fetch(`${SCHEDULES_ENDPOINT}/${id}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    credentials: "include",
+    body: JSON.stringify({ is_available: isAvailable }),
+  });
+  return handleResponse(response, "Không thể cập nhật trạng thái lịch biểu");
+};

@@ -5,6 +5,7 @@ import { useNotification } from "../contexts/NotificationContext";
 import {
   getHospitalRegistrations,
   updateHospitalRegistrationStatus,
+  updateHospitalRegistrationDetails
 } from "../services/admin.hospital.registration.api";
 
 export default function HospitalRegistrationRequests() {
@@ -15,7 +16,9 @@ export default function HospitalRegistrationRequests() {
   const [actionLoading, setActionLoading] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null); // URL of document to preview
   const [rejectReason, setRejectReason] = useState("");
-  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState(null);
 
   const fetchRequests = async () => {
     try {
@@ -43,11 +46,29 @@ export default function HospitalRegistrationRequests() {
       });
       showSuccess(`Đã cập nhật trạng thái thành: ${status}`);
       setSelectedReq(null);
-      setShowRejectInput(false);
+      setShowRejectModal(false);
       setRejectReason("");
       fetchRequests();
     } catch (error) {
       showError(error.response?.data?.message || "Có lỗi xảy ra");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateDetails = async (e) => {
+    e.preventDefault();
+    try {
+      setActionLoading(true);
+      await updateHospitalRegistrationDetails(editForm.id, editForm);
+      showSuccess("Cập nhật thông tin thành công");
+      setShowEditModal(false);
+      // Cập nhật lại list requests
+      fetchRequests();
+      // Update selectedReq if it's currently open
+      setSelectedReq(prev => ({ ...prev, ...editForm }));
+    } catch (error) {
+      showError(error.response?.data?.message || "Có lỗi khi cập nhật");
     } finally {
       setActionLoading(false);
     }
@@ -90,12 +111,20 @@ export default function HospitalRegistrationRequests() {
           </div>
           <div className="flex gap-2">
             {selectedReq.status === 'pending' && (
-              <>
-                {!showRejectInput ? (
                   <>
                     <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditForm(selectedReq);
+                        setShowEditModal(true);
+                      }}
+                      disabled={actionLoading}
+                    >
+                      Sửa hồ sơ
+                    </Button>
+                    <Button
                       variant="danger"
-                      onClick={() => setShowRejectInput(true)}
+                      onClick={() => setShowRejectModal(true)}
                       disabled={actionLoading}
                     >
                       Từ chối / Yêu cầu sửa
@@ -113,43 +142,6 @@ export default function HospitalRegistrationRequests() {
                       {actionLoading ? "Đang xử lý..." : "Phê duyệt ngay"}
                     </Button>
                   </>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="text" 
-                      placeholder="Nhập lý do từ chối / cần sửa..."
-                      className="px-3 py-2 border rounded-lg text-sm w-64"
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if(!rejectReason) return showError("Vui lòng nhập lý do");
-                        handleAction(selectedReq.id, "needs_revision", rejectReason);
-                      }}
-                      disabled={actionLoading}
-                    >
-                      Yêu cầu sửa
-                    </Button>
-                    <Button
-                      variant="danger"
-                      onClick={() => {
-                        if(!rejectReason) return showError("Vui lòng nhập lý do");
-                        confirm({
-                          title: "Từ chối hoàn toàn?",
-                          content: "Bạn có chắc chắn muốn từ chối hồ sơ này?",
-                          onConfirm: () => handleAction(selectedReq.id, "rejected", rejectReason),
-                        });
-                      }}
-                      disabled={actionLoading}
-                    >
-                      Từ chối
-                    </Button>
-                    <button onClick={() => setShowRejectInput(false)} className="text-gray-500 hover:text-gray-800 text-sm ml-2">Hủy</button>
-                  </div>
-                )}
-              </>
             )}
           </div>
         </div>
@@ -241,6 +233,93 @@ export default function HospitalRegistrationRequests() {
             )}
           </div>
         </div>
+
+        {/* Modal Reject */}
+        {showRejectModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-[500px] overflow-hidden">
+              <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                <h3 className="font-bold text-lg text-gray-800">Từ chối / Yêu cầu sửa đổi</h3>
+                <button onClick={() => setShowRejectModal(false)}><XCircle className="text-gray-400 hover:text-gray-600" /></button>
+              </div>
+              <div className="p-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Lý do (Sẽ được gửi qua Email)</label>
+                <textarea 
+                  className="w-full border rounded-lg p-3 text-sm focus:ring focus:ring-blue-200 outline-none h-32"
+                  placeholder="Nhập chi tiết lý do từ chối hoặc cần sửa đổi (ví dụ: Ảnh giấy phép mờ, vui lòng chụp lại...)"
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                />
+              </div>
+              <div className="p-4 border-t flex justify-end gap-3 bg-gray-50">
+                <Button variant="secondary" onClick={() => setShowRejectModal(false)}>Hủy</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    if(!rejectReason) return showError("Vui lòng nhập lý do");
+                    handleAction(selectedReq.id, "needs_revision", rejectReason);
+                  }}
+                  disabled={actionLoading}
+                >Yêu cầu sửa</Button>
+                <Button 
+                  variant="danger" 
+                  onClick={() => {
+                    if(!rejectReason) return showError("Vui lòng nhập lý do");
+                    handleAction(selectedReq.id, "rejected", rejectReason);
+                  }}
+                  disabled={actionLoading}
+                >Từ chối hoàn toàn</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Edit Form */}
+        {showEditModal && editForm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                <h3 className="font-bold text-lg text-gray-800">Chỉnh sửa hồ sơ (Admin hỗ trợ sửa)</h3>
+                <button onClick={() => setShowEditModal(false)}><XCircle className="text-gray-400 hover:text-gray-600" /></button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
+                <form id="editRegForm" onSubmit={handleUpdateDetails} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm mb-1 font-medium">Tên bệnh viện/cơ sở</label>
+                      <input className="w-full border rounded p-2" value={editForm.hospital_name || ''} onChange={e => setEditForm({...editForm, hospital_name: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1 font-medium">Loại hình</label>
+                      <input className="w-full border rounded p-2" value={editForm.hospital_type || ''} onChange={e => setEditForm({...editForm, hospital_type: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1 font-medium">Hotline cơ sở</label>
+                      <input className="w-full border rounded p-2" value={editForm.hotline || ''} onChange={e => setEditForm({...editForm, hotline: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1 font-medium">Mã số thuế / GPKD</label>
+                      <input className="w-full border rounded p-2" value={editForm.business_license_number || ''} onChange={e => setEditForm({...editForm, business_license_number: e.target.value})} />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm mb-1 font-medium">Địa chỉ chi tiết (Số nhà, đường...)</label>
+                      <input className="w-full border rounded p-2" value={editForm.address || ''} onChange={e => setEditForm({...editForm, address: e.target.value})} />
+                    </div>
+                  </div>
+                  
+                  {/* Có thể thêm phần upload file ở đây nếu muốn hỗ trợ Admin upload ảnh thay cho BV */}
+                  <div className="p-4 bg-blue-50 text-blue-800 text-sm rounded border border-blue-200 mt-4">
+                    <b>Lưu ý:</b> Lưu thông tin này sẽ thay đổi trực tiếp hồ sơ đăng ký của cơ sở.
+                  </div>
+                </form>
+              </div>
+              <div className="p-4 border-t flex justify-end gap-3 bg-gray-50">
+                <Button variant="secondary" onClick={() => setShowEditModal(false)}>Hủy</Button>
+                <Button type="submit" form="editRegForm" disabled={actionLoading}>Lưu thay đổi</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -3,10 +3,11 @@ import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import vi from "date-fns/locale/vi"; // Use Vietnamese locale
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { getAllSchedules, createSchedule } from "../services/admin.schedules.api";
+import { getAllSchedules, createSchedule, updateScheduleStatus } from "../services/admin.schedules.api";
+import { getAppointmentsBySchedule } from "../services/admin.appointments.api";
 import { getDoctors } from "../services/admin.doctors.api";
 import { useAuth } from "../contexts/AuthContext";
-import { CalendarDays, Plus, X } from "lucide-react";
+import { CalendarDays, Plus, X, Users, Clock, AlertCircle } from "lucide-react";
 
 // Setup the localizer by providing the date-fns functions
 const locales = {
@@ -40,6 +41,12 @@ export default function SchedulesManagement() {
     max_patients: 10,
   });
 
+  // Details Modal states
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [appointments, setAppointments] = useState([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+
   const loadSchedules = async () => {
     try {
       setLoading(true);
@@ -72,29 +79,72 @@ export default function SchedulesManagement() {
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
     if (!formData.doctor_id || !formData.work_date) {
-      alert("Vui lòng chọn bác sĩ và ngày trực!");
+      alert("Vui lòng chọn bác sĩ (hoặc tất cả) và ngày trực!");
       return;
     }
     
-    // Find selected doctor to get their hospital_id
-    const selectedDoc = doctors.find(d => d.id === parseInt(formData.doctor_id));
-    if (!selectedDoc) return;
+    // Find selected doctor to get their hospital_id (only if not 'all')
+    if (formData.doctor_id !== "all") {
+      const selectedDoc = doctors.find(d => d.id === parseInt(formData.doctor_id));
+      if (!selectedDoc) return;
+    }
 
     try {
       setIsSubmitting(true);
-      await createSchedule({
+      
+      const payload = {
         ...formData,
-        doctor_id: parseInt(formData.doctor_id),
         max_patients: parseInt(formData.max_patients),
-        hospital_id: user?.hospital_id, // Gắn vào bệnh viện của admin
-      });
-      alert("Tạo lịch thành công! Trạng thái đang Chờ duyệt (Pending).");
+        hospital_id: user?.hospital_id,
+      };
+
+      if (formData.doctor_id === "all") {
+        payload.apply_to_all_doctors = true;
+        delete payload.doctor_id;
+      } else {
+        payload.doctor_id = parseInt(formData.doctor_id);
+      }
+
+      const response = await createSchedule(payload);
+      
+      if (response && response.message) {
+        alert(response.message);
+      } else {
+        alert("Tạo lịch thành công! Trạng thái đang Chờ duyệt (Pending).");
+      }
       setIsModalOpen(false);
       loadSchedules();
     } catch (error) {
       alert(error.message || "Tạo lịch thất bại");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSelectEvent = async (event) => {
+    setSelectedEvent(event);
+    setIsDetailsModalOpen(true);
+    try {
+      setLoadingAppointments(true);
+      const data = await getAppointmentsBySchedule(event.id);
+      setAppointments(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Load appointments error:", e);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  const toggleScheduleStatus = async () => {
+    if (!selectedEvent) return;
+    try {
+      const newStatus = !selectedEvent.resource.is_available;
+      await updateScheduleStatus(selectedEvent.id, newStatus);
+      alert(`Đã ${newStatus ? 'mở' : 'đóng'} lịch thành công!`);
+      setIsDetailsModalOpen(false);
+      loadSchedules();
+    } catch (error) {
+      alert(error.message || "Không thể cập nhật trạng thái lịch");
     }
   };
 
@@ -130,6 +180,9 @@ export default function SchedulesManagement() {
           doctor: docName,
           hospital: hospName,
           max: sch.max_patients,
+          is_available: sch.is_available,
+          approval_status: sch.approval_status,
+          schedule: sch,
         }
       };
     });
@@ -137,9 +190,19 @@ export default function SchedulesManagement() {
 
   // Custom event styles
   const eventStyleGetter = (event, start, end, isSelected) => {
+    let backgroundColor = "#10b981"; // emerald-500 (Đang mở)
+    
+    if (event.resource.approval_status === "pending") {
+      backgroundColor = "#f59e0b"; // amber-500 (Chờ duyệt)
+    } else if (event.resource.approval_status === "rejected" || !event.resource.is_available) {
+      backgroundColor = "#94a3b8"; // slate-400 (Tạm ngưng / Hủy)
+    }
+    // TODO: if booked_patients >= max -> red (đã đầy)
+    // we can calculate this if we add appointments count or check it in backend
+
     return {
       style: {
-        backgroundColor: "#10b981", // emerald-500
+        backgroundColor,
         borderRadius: "6px",
         opacity: 0.9,
         color: "white",
@@ -201,6 +264,7 @@ export default function SchedulesManagement() {
               noEventsInRange: "Không có lịch trực nào trong khoảng thời gian này.",
             }}
             tooltipAccessor={(e) => `Bác sĩ: ${e.resource.doctor}\nBệnh viện: ${e.resource.hospital}\nTối đa: ${e.resource.max} bệnh nhân`}
+            onSelectEvent={handleSelectEvent}
           />
         )}
       </div>
@@ -229,6 +293,7 @@ export default function SchedulesManagement() {
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="">-- Chọn bác sĩ --</option>
+                  <option value="all">-- Áp dụng cho tất cả bác sĩ --</option>
                   {doctors.map(doc => (
                     <option key={doc.id} value={doc.id}>
                       BS. {doc.user?.full_name || `ID: ${doc.id}`} - {doc.specialty}
@@ -302,6 +367,123 @@ export default function SchedulesManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chi tiết Lịch (Event Details) */}
+      {isDetailsModalOpen && selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="font-bold text-slate-800">Chi tiết Ca trực</h3>
+              <button 
+                onClick={() => setIsDetailsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5 flex-1 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                  <div className="flex items-center gap-2 text-blue-800 mb-1">
+                    <Users className="w-4 h-4" />
+                    <span className="font-medium">Bác sĩ phụ trách</span>
+                  </div>
+                  <p className="text-slate-700 font-semibold">{selectedEvent.resource.doctor}</p>
+                </div>
+                <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                  <div className="flex items-center gap-2 text-emerald-800 mb-1">
+                    <Clock className="w-4 h-4" />
+                    <span className="font-medium">Thời gian</span>
+                  </div>
+                  <p className="text-slate-700 font-semibold">
+                    {format(selectedEvent.start, 'HH:mm')} - {format(selectedEvent.end, 'HH:mm')}
+                  </p>
+                  <p className="text-sm text-slate-500">{format(selectedEvent.start, 'dd/MM/yyyy')}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-slate-400" />
+                  Danh sách Bệnh nhân ({appointments.length}/{selectedEvent.resource.max})
+                </h4>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    selectedEvent.resource.is_available 
+                      ? 'bg-emerald-100 text-emerald-700' 
+                      : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {selectedEvent.resource.is_available ? 'Đang mở' : 'Đã đóng'}
+                  </span>
+                  <button 
+                    onClick={toggleScheduleStatus}
+                    className={`px-4 py-1 rounded-lg font-medium text-sm transition-colors border ${
+                      selectedEvent.resource.is_available
+                        ? 'border-red-200 text-red-600 hover:bg-red-50'
+                        : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                    }`}
+                  >
+                    {selectedEvent.resource.is_available ? 'Khóa ca trực' : 'Mở ca trực'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3 font-medium text-slate-600">Bệnh nhân</th>
+                      <th className="px-4 py-3 font-medium text-slate-600">Loại khám</th>
+                      <th className="px-4 py-3 font-medium text-slate-600">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loadingAppointments ? (
+                      <tr>
+                        <td colSpan="3" className="px-4 py-8 text-center text-slate-500">
+                          Đang tải danh sách...
+                        </td>
+                      </tr>
+                    ) : appointments.length === 0 ? (
+                      <tr>
+                        <td colSpan="3" className="px-4 py-8 text-center text-slate-500 flex flex-col items-center">
+                          <AlertCircle className="w-8 h-8 text-slate-300 mb-2" />
+                          Chưa có bệnh nhân nào đặt lịch trong ca này
+                        </td>
+                      </tr>
+                    ) : (
+                      appointments.map(app => (
+                        <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-800">{app.user?.full_name || 'N/A'}</div>
+                            <div className="text-slate-500 text-xs">{app.user?.phone}</div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {app.examination_type === 'online' ? 'Trực tuyến' : 'Trực tiếp'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-2 py-1 rounded-md text-xs font-medium ${
+                              app.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                              app.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                              app.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {app.status === 'pending' ? 'Chờ duyệt' :
+                               app.status === 'confirmed' ? 'Đã duyệt' :
+                               app.status === 'completed' ? 'Hoàn thành' : 'Đã hủy'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       )}

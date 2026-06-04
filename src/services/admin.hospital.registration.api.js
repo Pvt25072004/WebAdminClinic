@@ -35,3 +35,16 @@ export const updateHospitalRegistrationStatus = async (id, payload) => {
   });
   return handleResponse(response, "Lỗi cập nhật trạng thái");
 };
+
+export const updateHospitalRegistrationDetails = async (id, payload) => {
+  const response = await fetch(`${BASE_URL}/${id}/submit`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+    credentials: "include",
+  });
+  return handleResponse(response, "Lỗi cập nhật hồ sơ");
+};

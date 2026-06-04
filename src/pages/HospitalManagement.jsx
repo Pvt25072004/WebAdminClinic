@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Building,
   Stethoscope,
@@ -16,10 +17,14 @@ import {
   ToggleLeft,
   ToggleRight,
   Home,
+  X,
+  Inbox,
 } from "lucide-react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import Button from "../components/Button";
+import CardSkeleton from "../components/CardSkeleton";
+import EmptyState from "../components/EmptyState";
 import {
   getHospitals,
   updateHospital,
@@ -42,6 +47,7 @@ export default function HospitalManagement() {
   const [categoryForm, setCategoryForm] = useState({
     name: "",
   });
+  const location = useLocation();
   const [hospitals, setHospitals] = useState([]);
   const [loadingHospitals, setLoadingHospitals] = useState(false);
   const [editingHospital, setEditingHospital] = useState(null);
@@ -89,7 +95,7 @@ export default function HospitalManagement() {
   const [filterStatus, setFilterStatus] = useState("all");
 
   const cities = Array.from(
-    new Set(hospitals.map((h) => h.city).filter(Boolean)),
+    new Set(hospitals.map((h) => h.city?.name || h.city).filter(Boolean)),
   );
 
   const loadCategories = async () => {
@@ -162,7 +168,7 @@ export default function HospitalManagement() {
     setHospitalForm({
       name: hospital.name || "",
       address: hospital.address || "",
-      city: hospital.city || "",
+      city: hospital.city?.name || hospital.city || "",
       phone: hospital.phone || "",
       email: hospital.email || "",
       main_specialty: hospital.main_specialty || "",
@@ -209,13 +215,16 @@ export default function HospitalManagement() {
     const isConfirm = await confirm(
       "Xác nhận xóa",
       "Bạn có chắc muốn xóa bệnh viện này?",
-      { variant: "danger", confirmText: "Xóa" },
+      { variant: "danger", confirmText: "Tiếp tục" },
     );
     if (!isConfirm) return;
 
+    const reason = window.prompt("Vui lòng nhập lý do xóa để gửi qua Email cho bệnh viện:");
+    if (reason === null) return; // User cancelled prompt
+
     try {
       await deleteHospital(id);
-      showSuccess("Đã xóa bệnh viện");
+      showSuccess("Đã xóa bệnh viện. Lý do đã được gửi qua email.");
       void loadHospitals();
     } catch (e) {
       showError(e.message || "Không thể xóa bệnh viện");
@@ -242,9 +251,20 @@ export default function HospitalManagement() {
     void loadCategories();
   }, []);
 
+  useEffect(() => {
+    if (location.state?.selectedHospitalId && hospitals.length > 0) {
+      const h = hospitals.find(x => x.id === location.state.selectedHospitalId);
+      if (h) {
+        setViewingHospital(h);
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [location.state?.selectedHospitalId, hospitals]);
+
   const filteredHospitals = hospitals.filter((h) => {
     const matchSearch = h.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchCity = filterCity ? h.city === filterCity : true;
+    const hCityName = h.city?.name || h.city;
+    const matchCity = filterCity ? hCityName === filterCity : true;
     let matchStatus = true;
     if (filterStatus === "active") matchStatus = h.is_active !== false;
     if (filterStatus === "inactive") matchStatus = h.is_active === false;
@@ -283,8 +303,20 @@ export default function HospitalManagement() {
         />
 
         {editingHospital && (
-          <form onSubmit={handleSubmitHospital} className="mb-6 grid gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-800 border-b pb-3">Cập nhật thông tin Bệnh viện</h3>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                <h3 className="text-xl font-semibold text-slate-800">Cập nhật thông tin Bệnh viện</h3>
+                <button 
+                  type="button"
+                  onClick={resetForm}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto">
+                <form onSubmit={handleSubmitHospital} className="grid gap-4">
             <div className="flex items-center gap-4 mb-4">
             <div className="w-24 h-24 rounded-lg bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative group">
               {hospitalForm.logo_url ? (
@@ -485,22 +517,22 @@ export default function HospitalManagement() {
               className="bg-white rounded-lg"
             />
           </div>
-          <div className="flex justify-end gap-2">
-            {editingHospital && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={resetForm}
-              >
-                Hủy
-              </Button>
-            )}
-            <Button type="submit" variant="primary" size="sm">
+          <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={resetForm}
+            >
+              Hủy
+            </Button>
+            <Button type="submit" variant="primary">
               Lưu thay đổi
             </Button>
           </div>
         </form>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Filters */}
@@ -554,15 +586,16 @@ export default function HospitalManagement() {
         </div>
 
         <div className="space-y-4">
-          {loadingHospitals && (
-            <p className="text-sm text-slate-500 text-center py-8">
-              Đang tải danh sách bệnh viện...
-            </p>
-          )}
+        <div className="space-y-4">
+          {loadingHospitals && <CardSkeleton count={4} />}
           {!loadingHospitals && filteredHospitals.length === 0 && (
-            <p className="text-sm text-slate-500 text-center py-8">
-              Không tìm thấy bệnh viện nào.
-            </p>
+            <div className="bg-white border border-slate-100 rounded-xl">
+              <EmptyState 
+                icon={Inbox} 
+                title="Chưa có cơ sở y tế nào" 
+                description="Không tìm thấy cơ sở y tế nào phù hợp với bộ lọc." 
+              />
+            </div>
           )}
           {filteredHospitals.map((hospital) => (
             <div

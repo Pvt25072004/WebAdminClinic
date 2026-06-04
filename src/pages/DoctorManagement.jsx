@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Button from "../components/Button";
 import Pagination from "../components/Pagination";
-import { ToggleRight, ToggleLeft, Eye, X, FileText } from "lucide-react";
+import CardSkeleton from "../components/CardSkeleton";
+import EmptyState from "../components/EmptyState";
+import { ToggleRight, ToggleLeft, Eye, X, FileText, Inbox } from "lucide-react";
 import {
   getDoctors,
   createDoctor,
@@ -467,15 +469,17 @@ export default function DoctorManagement() {
       </form>
 
       <div className="space-y-4">
-        {loadingDoctors && (
-          <p className="text-sm text-slate-500">Đang tải danh sách bác sĩ...</p>
-        )}
+        {loadingDoctors && <CardSkeleton count={4} />}
         {!loadingDoctors && doctors.length === 0 && (
-          <p className="text-sm text-slate-500">
-            Chưa có bác sĩ nào (hoặc API chưa trả dữ liệu).
-          </p>
+          <div className="bg-white border border-slate-100 rounded-xl">
+            <EmptyState 
+              icon={Inbox} 
+              title="Chưa có bác sĩ nào" 
+              description="Không tìm thấy dữ liệu bác sĩ (hoặc API chưa trả dữ liệu)." 
+            />
+          </div>
         )}
-        {doctors.map((doctor) => {
+        {!loadingDoctors && doctors.map((doctor) => {
           // Xử lý an toàn vì cấu trúc Doctor đã thay đổi (thông tin auth nằm trong doctor.user)
           const name = doctor.user?.full_name || doctor.name || "Chưa có tên";
           const email = doctor.user?.email || "Chưa có email";

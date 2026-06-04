@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Button from "../components/Button";
 import Pagination from "../components/Pagination";
+import TableSkeleton from "../components/TableSkeleton";
+import EmptyState from "../components/EmptyState";
 import { ToggleRight, ToggleLeft, Inbox } from "lucide-react";
 import {
   getUsers,
@@ -62,23 +64,15 @@ export default function PatientManagement() {
             </tr>
           </thead>
           <tbody>
-            {loadingUsers && (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-500">
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mb-4"></div>
-                    Đang tải danh sách người dùng...
-                  </div>
-                </td>
-              </tr>
-            )}
+            {loadingUsers && <TableSkeleton columns={5} rows={5} />}
             {!loadingUsers && visibleUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-12 text-center">
-                  <div className="flex flex-col items-center justify-center text-slate-400">
-                    <Inbox className="w-12 h-12 mb-3 text-slate-300" />
-                    <p className="font-medium">Chưa có người dùng nào</p>
-                  </div>
+                <td colSpan={5}>
+                  <EmptyState 
+                    icon={Inbox} 
+                    title="Chưa có người dùng nào" 
+                    description="Danh sách bệnh nhân đang trống." 
+                  />
                 </td>
               </tr>
             )}

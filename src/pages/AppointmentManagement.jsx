@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Button from "../components/Button";
-import { getAllAppointments, updateAppointmentStatus } from "../services/admin.appointments.api";
+import { getAllAppointments, updateAppointmentStatus, getMedicalRecord, updateAppointment } from "../services/admin.appointments.api";
 import { useNotification } from "../contexts/NotificationContext";
-import { CheckCircle, XCircle, Eye, Calendar, Clock, FileText, Check, X } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Calendar, Clock, FileText, Check, X, DollarSign } from "lucide-react";
 import { formatDate } from "../utils/helpers";
 
 export default function AppointmentManagement() {
@@ -11,6 +11,31 @@ export default function AppointmentManagement() {
   const [loading, setLoading] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [medicalRecord, setMedicalRecord] = useState(null);
+  const [loadingRecord, setLoadingRecord] = useState(false);
+
+  useEffect(() => {
+    if (selectedAppointment && selectedAppointment.status === "completed") {
+      const fetchRecord = async () => {
+        setLoadingRecord(true);
+        try {
+          const res = await getMedicalRecord(selectedAppointment.id);
+          if (res && (res.id || res.diagnosis || res.prescription)) {
+            setMedicalRecord(res);
+          } else {
+            setMedicalRecord(null);
+          }
+        } catch (e) {
+          setMedicalRecord(null);
+        } finally {
+          setLoadingRecord(false);
+        }
+      };
+      fetchRecord();
+    } else {
+      setMedicalRecord(null);
+    }
+  }, [selectedAppointment?.id, selectedAppointment?.status]);
 
   const loadAppointments = async () => {
     try {
@@ -56,6 +81,25 @@ export default function AppointmentManagement() {
       }
     } catch (e) {
       showError("Lỗi khi cập nhật: " + e.message);
+    }
+  };
+
+  const handleMarkRefundCompleted = async (apt) => {
+    const isConfirm = await confirm(
+      "Xác nhận hoàn tiền",
+      `Xác nhận đã hoàn tiền cho bệnh nhân ${apt.user?.full_name}?`,
+      { confirmText: "Đã hoàn tiền" }
+    );
+    if (!isConfirm) return;
+    try {
+      await updateAppointment(apt.id, { refund_status: "completed" });
+      showSuccess("Đã đánh dấu hoàn tiền thành công");
+      void loadAppointments();
+      if (selectedAppointment?.id === apt.id) {
+        setSelectedAppointment((prev) => ({ ...prev, refund_status: "completed" }));
+      }
+    } catch (e) {
+      showError("Lỗi: " + e.message);
     }
   };
 
@@ -125,6 +169,7 @@ export default function AppointmentManagement() {
               <th className="py-3 px-2">Thời gian khám</th>
               <th className="py-3 px-2">Hình thức</th>
               <th className="py-3 px-2 text-center">Trạng thái</th>
+              <th className="py-3 px-2 text-center">Hoàn tiền</th>
               <th className="py-3 px-2 text-right">Thao tác</th>
             </tr>
           </thead>
@@ -179,6 +224,18 @@ export default function AppointmentManagement() {
                   </td>
                   <td className="py-3 px-2 text-center">
                     {getStatusBadge(apt.status)}
+                  </td>
+                  <td className="py-3 px-2 text-center">
+                    {apt.refund_status === "requested" && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
+                        <DollarSign className="w-3 h-3" /> Chờ hoàn tiền
+                      </span>
+                    )}
+                    {apt.refund_status === "completed" && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">
+                        <CheckCircle className="w-3 h-3" /> Đã hoàn tiền
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-2 text-right">
                     <div className="flex gap-2 justify-end">
@@ -268,6 +325,43 @@ export default function AppointmentManagement() {
               </div>
             </div>
 
+            {/* Medical Record Details */}
+            {selectedAppointment.status === "completed" && (
+              <div className="mb-6">
+                <h4 className="font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> Hồ sơ bệnh án
+                </h4>
+                <div className="bg-emerald-50/50 p-4 rounded-lg text-sm border border-emerald-100">
+                  {loadingRecord ? (
+                    <p className="text-slate-500 text-center py-2">Đang tải hồ sơ bệnh án...</p>
+                  ) : medicalRecord ? (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-slate-500 font-medium mb-1 uppercase text-xs">Chẩn đoán</p>
+                        <p className="p-2 bg-white rounded border border-slate-200 text-slate-800 whitespace-pre-wrap">
+                          {medicalRecord.diagnosis || "Không có dữ liệu"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 font-medium mb-1 uppercase text-xs">Đơn thuốc</p>
+                        <p className="p-2 bg-white rounded border border-slate-200 text-slate-800 whitespace-pre-wrap">
+                          {medicalRecord.prescription || "Không có dữ liệu"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 font-medium mb-1 uppercase text-xs">Ghi chú của bác sĩ</p>
+                        <p className="p-2 bg-white rounded border border-slate-200 text-slate-800 whitespace-pre-wrap">
+                          {medicalRecord.notes || "Không có dữ liệu"}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-center py-2">Bác sĩ chưa cập nhật hồ sơ bệnh án cho buổi khám này.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button variant="ghost" onClick={() => setSelectedAppointment(null)}>
@@ -288,9 +382,18 @@ export default function AppointmentManagement() {
                   <CheckCircle className="w-4 h-4 text-emerald-500 mr-1" /> Đánh dấu hoàn thành
                 </Button>
               )}
-              {["pending", "confirmed", "awaiting_payment"].includes(selectedAppointment.status) && (
+              {["confirmed", "awaiting_payment"].includes(selectedAppointment.status) && (
                 <Button variant="danger" onClick={() => handleUpdateStatus(selectedAppointment.id, "cancelled", true)}>
                   <XCircle className="w-4 h-4 mr-1" /> Hủy lịch
+                </Button>
+              )}
+              {selectedAppointment.refund_status === "requested" && (
+                <Button
+                  variant="primary"
+                  onClick={() => handleMarkRefundCompleted(selectedAppointment)}
+                  className="bg-amber-500 hover:bg-amber-600 border-none text-white flex items-center gap-1"
+                >
+                  <DollarSign className="w-4 h-4" /> Xác nhận đã hoàn tiền
                 </Button>
               )}
             </div>
