@@ -2,8 +2,12 @@ import { getAuthHeaders, handleResponse } from "./http";
 import { API_BASE_URL } from "../utils/constants";
 const APPOINTMENTS_ENDPOINT = `${API_BASE_URL}/appointments`;
 
-export const getAllAppointments = async () => {
-  const response = await fetch(APPOINTMENTS_ENDPOINT, {
+export const getAllAppointments = async (page = 1, limit = 100) => {
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+  const response = await fetch(`${APPOINTMENTS_ENDPOINT}?${queryParams.toString()}`, {
     headers: {
       ...getAuthHeaders(),
     },
@@ -12,12 +16,12 @@ export const getAllAppointments = async () => {
   if (response.ok) {
     try {
       const data = await response.json();
-      return Array.isArray(data) ? data : (data.data || data.items || []);
+      return data;
     } catch {
-      return [];
+      return { data: [], total: 0, page: 1, limit: 100, totalPages: 1 };
     }
   }
-  return [];
+  return { data: [], total: 0, page: 1, limit: 100, totalPages: 1 };
 };
 
 export const updateAppointmentStatus = async (id, status, reason = "") => {

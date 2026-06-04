@@ -4,6 +4,7 @@ import { getAllAppointments, updateAppointmentStatus, getMedicalRecord, updateAp
 import { useNotification } from "../contexts/NotificationContext";
 import { CheckCircle, XCircle, Eye, Calendar, Clock, FileText, Check, X, DollarSign } from "lucide-react";
 import { formatDate } from "../utils/helpers";
+import Pagination from "../components/Pagination";
 
 export default function AppointmentManagement() {
   const { showSuccess, showError, confirm } = useNotification();
@@ -11,6 +12,10 @@ export default function AppointmentManagement() {
   const [loading, setLoading] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [medicalRecord, setMedicalRecord] = useState(null);
   const [loadingRecord, setLoadingRecord] = useState(false);
 
@@ -40,8 +45,16 @@ export default function AppointmentManagement() {
   const loadAppointments = async () => {
     try {
       setLoading(true);
-      const data = await getAllAppointments();
-      setAppointments(Array.isArray(data) ? data : []);
+      const res = await getAllAppointments(currentPage, limit);
+      if (Array.isArray(res)) {
+        setAppointments(res);
+        setTotalItems(res.length);
+        setTotalPages(1);
+      } else {
+        setAppointments(res.data || []);
+        setTotalItems(res.total || 0);
+        setTotalPages(res.totalPages || 1);
+      }
     } catch (e) {
       console.error("Load appointments error:", e);
       showError("Không thể tải danh sách cuộc hẹn");
@@ -52,7 +65,7 @@ export default function AppointmentManagement() {
 
   useEffect(() => {
     void loadAppointments();
-  }, []);
+  }, [currentPage, limit]);
 
   const handleUpdateStatus = async (id, status, requireReason = false) => {
     let reason = "";
@@ -254,6 +267,16 @@ export default function AppointmentManagement() {
           </tbody>
         </table>
       </div>
+
+      {!loading && appointments.length > 0 && (
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={totalItems}
+          itemsPerPage={limit}
+        />
+      )}
 
       {selectedAppointment && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

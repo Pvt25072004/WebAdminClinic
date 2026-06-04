@@ -17,9 +17,10 @@ import { useEffect, useState } from "react";
 import { getHospitals } from "../services/admin.hospitals.api";
 import { getUsers } from "../services/admin.users.api";
 import { getDoctors } from "../services/admin.doctors.api";
-import { getAllPayments, getDashboardStats } from "../services/admin.payments.api";
+import { getAllPayments, getDashboardStats as getPaymentStats } from "../services/admin.payments.api";
 import { getCategories } from "../services/admin.categories.api";
 import { getAllAppointments } from "../services/admin.appointments.api";
+import { getDashboardStats } from "../services/admin.dashboard.api";
 import { useNavigate } from "react-router-dom";
 
 export default function Home() {
@@ -51,30 +52,25 @@ export default function Home() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [hospitals, users, doctors, payments, categories, appointments, statsData] = await Promise.all([
+        const [hospitals, users, doctors, payments, appointments, statsData, paymentStats] = await Promise.all([
           getHospitals().catch(() => []),
-          getUsers().catch(() => []),
+          getUsers(1, 5).catch(() => []),
           getDoctors().catch(() => []),
           getAllPayments().catch(() => []),
-          getCategories().catch(() => []),
-          getAllAppointments().catch(() => []),
-          getDashboardStats().catch(() => null)
+          getAllAppointments(1, 5).catch(() => []),
+          getDashboardStats().catch(() => null),
+          getPaymentStats().catch(() => null)
         ]);
 
-        const totalHospitals = Array.isArray(hospitals) ? hospitals.length : (hospitals?.total || 0);
-        const countUsers = users?.total ?? (Array.isArray(users?.data) ? users.data.length : (Array.isArray(users) ? users.length : 0));
-        const countDoctors = doctors?.total ?? (Array.isArray(doctors?.data) ? doctors.data.length : (Array.isArray(doctors) ? doctors.length : 0));
-        const totalUsers = countUsers + countDoctors;
-        const totalCategories = Array.isArray(categories) ? categories.length : 0;
-        const totalAppointments = Array.isArray(appointments) ? appointments.length : 0;
+        const totalHospitals = statsData?.totalHospitals || 0;
+        const totalUsers = (statsData?.totalPatients || 0) + (statsData?.totalDoctors || 0);
+        const totalCategories = 0; // Not critical
+        const totalAppointments = statsData?.totalAppointments || 0;
+        const totalDoctors = statsData?.totalDoctors || 0;
+        const totalRevenue = statsData?.totalRevenue || 0;
         
-        let totalRevenue = 0;
         const paymentsArray = Array.isArray(payments) ? payments : [];
         const alerts = [];
-
-        if (statsData) {
-          totalRevenue = statsData.totalRevenue || totalRevenue;
-        }
 
         const recentItems = [];
         const formatTime = (dateString) => {
@@ -119,9 +115,10 @@ export default function Home() {
           });
         }
 
+        const appointmentsList = Array.isArray(appointments) ? appointments : (Array.isArray(appointments?.data) ? appointments.data : []);
         const recentAppointments = [];
-        if (normalizedRole === "admin_hospital" && Array.isArray(appointments)) {
-          const sortedAppointments = [...appointments]
+        if (normalizedRole === "admin_hospital" && appointmentsList.length > 0) {
+          const sortedAppointments = [...appointmentsList]
             .sort((a,b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
             .slice(0, 5);
           sortedAppointments.forEach((a, index) => {
@@ -143,12 +140,12 @@ export default function Home() {
           totalCategories,
           totalAppointments,
           paymentsData: paymentsArray,
-          appointmentsData: Array.isArray(appointments) ? appointments : [],
+          appointmentsData: appointmentsList,
           hospitalsData: Array.isArray(hospitals) ? hospitals : [],
           recentItems,
           alerts,
           recentAppointments,
-          revenueChart: statsData?.revenueChart || [],
+          revenueChart: paymentStats?.revenueChart || [],
           loading: false,
         });
       } catch (err) {
@@ -197,8 +194,8 @@ export default function Home() {
   ];
 
   const hospitalStats = [
-    { title: "Doanh thu bệnh viện", amount: stats.loading ? "..." : formatCurrency(stats.totalRevenue), Icon: FaMoneyBillWave, onClick: () => navigate("/payment") },
-    { title: "Lịch khám (Hôm nay)", amount: stats.loading ? "..." : stats.totalAppointments.toString(), Icon: FaCalendarCheck, onClick: () => navigate("/schedules") },
+    { title: "Doanh thu cơ sở", amount: stats.loading ? "..." : formatCurrency(stats.totalRevenue), Icon: FaMoneyBillWave, onClick: () => navigate("/payment") },
+    { title: "Lịch khám (Tổng)", amount: stats.loading ? "..." : stats.totalAppointments.toString(), Icon: FaCalendarCheck, onClick: () => navigate("/schedules") },
     { title: "Bác sĩ hoạt động", amount: stats.loading ? "..." : stats.totalUsers.toString(), Icon: FaStethoscope, onClick: () => navigate("/doctor") },
   ];
 

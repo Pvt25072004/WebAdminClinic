@@ -44,13 +44,20 @@ export default function DoctorRequestsManagement() {
     const isConfirm = await confirm(
       "Xác nhận từ chối",
       "Bạn có chắc muốn từ chối yêu cầu này?",
-      { variant: "danger", confirmText: "Từ chối" }
+      { variant: "danger", confirmText: "Tiếp tục" }
     );
     if (!isConfirm) return;
     
+    const reason = window.prompt("Vui lòng nhập lý do từ chối để gửi cho bác sĩ (bắt buộc):");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      showError("Lý do từ chối không được để trống!");
+      return;
+    }
+
     try {
-      await updateRequestStatus(id, "rejected");
-      showSuccess("Đã từ chối yêu cầu.");
+      await updateRequestStatus(id, "rejected", reason);
+      showSuccess("Đã từ chối yêu cầu. Lý do đã được ghi nhận.");
       void loadRequests();
       if (selectedRequest?.id === id) setSelectedRequest(null);
     } catch (e) {

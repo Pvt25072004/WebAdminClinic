@@ -36,6 +36,7 @@ export default function SchedulesManagement() {
   const [formData, setFormData] = useState({
     doctor_id: "",
     work_date: "",
+    end_date: "",
     start_time: "08:00:00",
     end_time: "17:00:00",
     max_patients: 10,
@@ -83,10 +84,18 @@ export default function SchedulesManagement() {
       return;
     }
     
+    let hospitalId = user?.hospital_id;
+
     // Find selected doctor to get their hospital_id (only if not 'all')
     if (formData.doctor_id !== "all") {
       const selectedDoc = doctors.find(d => d.id === parseInt(formData.doctor_id));
       if (!selectedDoc) return;
+      if (!hospitalId && selectedDoc.hospitals && selectedDoc.hospitals.length > 0) {
+        hospitalId = selectedDoc.hospitals[0].id;
+      }
+    } else if (!hospitalId) {
+      alert("Super Admin không thể chọn 'Áp dụng cho tất cả bác sĩ' mà không có cơ sở y tế mặc định. Vui lòng chọn một bác sĩ cụ thể.");
+      return;
     }
 
     try {
@@ -95,8 +104,12 @@ export default function SchedulesManagement() {
       const payload = {
         ...formData,
         max_patients: parseInt(formData.max_patients),
-        hospital_id: user?.hospital_id,
+        hospital_id: hospitalId,
       };
+      
+      if (!payload.end_date) {
+        delete payload.end_date;
+      }
 
       if (formData.doctor_id === "all") {
         payload.apply_to_all_doctors = true;
@@ -302,15 +315,26 @@ export default function SchedulesManagement() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ngày trực</label>
-                <input 
-                  type="date"
-                  required
-                  value={formData.work_date}
-                  onChange={(e) => setFormData({...formData, work_date: e.target.value})}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Từ ngày</label>
+                  <input 
+                    type="date"
+                    required
+                    value={formData.work_date}
+                    onChange={(e) => setFormData({...formData, work_date: e.target.value})}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Đến ngày (Tùy chọn)</label>
+                  <input 
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
