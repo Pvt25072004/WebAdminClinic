@@ -203,7 +203,9 @@ export default function HospitalManagement() {
         await updateHospital(editingHospital.id, payload);
         showSuccess("Cập nhật bệnh viện thành công");
       } else {
-        showError("Tính năng tạo mới bệnh viện đã được chuyển sang quy trình phê duyệt đối tác.");
+        showError(
+          "Tính năng tạo mới bệnh viện đã được chuyển sang quy trình phê duyệt đối tác.",
+        );
       }
       resetForm();
       void loadHospitals();
@@ -219,7 +221,9 @@ export default function HospitalManagement() {
     );
     if (!isConfirm) return;
 
-    const reason = window.prompt("Vui lòng nhập lý do xóa để gửi qua Email cho bệnh viện:");
+    const reason = window.prompt(
+      "Vui lòng nhập lý do xóa để gửi qua Email cho bệnh viện:",
+    );
     if (reason === null) return; // User cancelled prompt
 
     try {
@@ -253,7 +257,9 @@ export default function HospitalManagement() {
 
   useEffect(() => {
     if (location.state?.selectedHospitalId && hospitals.length > 0) {
-      const h = hospitals.find(x => x.id === location.state.selectedHospitalId);
+      const h = hospitals.find(
+        (x) => x.id === location.state.selectedHospitalId,
+      );
       if (h) {
         setViewingHospital(h);
         window.history.replaceState({}, document.title);
@@ -283,11 +289,7 @@ export default function HospitalManagement() {
             </p>
           </div>
           {editingHospital && (
-            <Button
-              size="sm"
-              onClick={resetForm}
-              variant="secondary"
-            >
+            <Button size="sm" onClick={resetForm} variant="secondary">
               Hủy chỉnh sửa
             </Button>
           )}
@@ -306,8 +308,10 @@ export default function HospitalManagement() {
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                <h3 className="text-xl font-semibold text-slate-800">Cập nhật thông tin Bệnh viện</h3>
-                <button 
+                <h3 className="text-xl font-semibold text-slate-800">
+                  Cập nhật thông tin Bệnh viện
+                </h3>
+                <button
                   type="button"
                   onClick={resetForm}
                   className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
@@ -317,219 +321,236 @@ export default function HospitalManagement() {
               </div>
               <div className="p-6 overflow-y-auto">
                 <form onSubmit={handleSubmitHospital} className="grid gap-4">
-            <div className="flex items-center gap-4 mb-4">
-            <div className="w-24 h-24 rounded-lg bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative group">
-              {hospitalForm.logo_url ? (
-                <img
-                  src={hospitalForm.logo_url}
-                  alt="Logo"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Building className="w-8 h-8 text-slate-400" />
-              )}
-              {uploadingImage && (
-                <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              )}
-              <div 
-                className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer transition-all"
-                onClick={() => !uploadingImage && fileInputRef.current?.click()}
-              >
-                <span className="text-white text-xs font-medium">Đổi ảnh</span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-slate-900 mb-1">Logo Bệnh viện</h3>
-              <p className="text-xs text-slate-500 mb-2">Ảnh đại diện, tỷ lệ 1:1, dung lượng &lt; 2MB</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => !uploadingImage && fileInputRef.current?.click()}
-                disabled={uploadingImage}
-              >
-                {uploadingImage ? "Đang tải..." : "Tải ảnh lên"}
-              </Button>
-            </div>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Tên bệnh viện
-              </label>
-              <input
-                type="text"
-                value={hospitalForm.name}
-                onChange={(e) =>
-                  setHospitalForm((prev) => ({
-                    ...prev,
-                    name: e.target.value,
-                  }))
-                }
-                required
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Chuyên khoa chính
-              </label>
-              <input
-                type="text"
-                value={hospitalForm.main_specialty}
-                onChange={(e) =>
-                  setHospitalForm((prev) => ({
-                    ...prev,
-                    main_specialty: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Thành phố/Tỉnh
-              </label>
-              <input
-                type="text"
-                value={hospitalForm.city}
-                onChange={(e) =>
-                  setHospitalForm((prev) => ({
-                    ...prev,
-                    city: e.target.value,
-                  }))
-                }
-                placeholder="Ví dụ: TP. Hồ Chí Minh, Hà Nội..."
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Địa chỉ cụ thể
-              </label>
-              <input
-                type="text"
-                value={hospitalForm.address}
-                onChange={(e) =>
-                  setHospitalForm((prev) => ({
-                    ...prev,
-                    address: e.target.value,
-                  }))
-                }
-                placeholder="Số nhà, đường, phường/xã..."
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Số điện thoại
-              </label>
-              <input
-                type="text"
-                value={hospitalForm.phone}
-                onChange={(e) =>
-                  setHospitalForm((prev) => ({
-                    ...prev,
-                    phone: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={hospitalForm.email}
-                onChange={(e) =>
-                  setHospitalForm((prev) => ({
-                    ...prev,
-                    email: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
-          {/* Chọn nhiều chuyên khoa cho bệnh viện */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Chuyên khoa áp dụng
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => {
-                const checked = hospitalForm.categoryIds?.includes(cat.id);
-                return (
-                  <label
-                    key={cat.id}
-                    className="inline-flex items-center gap-1 px-2 py-1 border rounded-full text-xs cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      className="rounded border-slate-300"
-                      checked={!!checked}
-                      onChange={(e) => {
-                        setHospitalForm((prev) => {
-                          const current = prev.categoryIds || [];
-                          if (e.target.checked) {
-                            return {
-                              ...prev,
-                              categoryIds: [...current, cat.id],
-                            };
-                          }
-                          return {
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-24 h-24 rounded-lg bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative group">
+                      {hospitalForm.logo_url ? (
+                        <img
+                          src={hospitalForm.logo_url}
+                          alt="Logo"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Building className="w-8 h-8 text-slate-400" />
+                      )}
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                          <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                      <div
+                        className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer transition-all"
+                        onClick={() =>
+                          !uploadingImage && fileInputRef.current?.click()
+                        }
+                      >
+                        <span className="text-white text-xs font-medium">
+                          Đổi ảnh
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-900 mb-1">
+                        Logo Bệnh viện
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-2">
+                        Ảnh đại diện, tỷ lệ 1:1, dung lượng &lt; 2MB
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          !uploadingImage && fileInputRef.current?.click()
+                        }
+                        disabled={uploadingImage}
+                      >
+                        {uploadingImage ? "Đang tải..." : "Tải ảnh lên"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Tên bệnh viện
+                      </label>
+                      <input
+                        type="text"
+                        value={hospitalForm.name}
+                        onChange={(e) =>
+                          setHospitalForm((prev) => ({
                             ...prev,
-                            categoryIds: current.filter((id) => id !== cat.id),
-                          };
-                        });
-                      }}
+                            name: e.target.value,
+                          }))
+                        }
+                        required
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Chuyên khoa chính
+                      </label>
+                      <input
+                        type="text"
+                        value={hospitalForm.main_specialty}
+                        onChange={(e) =>
+                          setHospitalForm((prev) => ({
+                            ...prev,
+                            main_specialty: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Thành phố/Tỉnh
+                      </label>
+                      <input
+                        type="text"
+                        value={hospitalForm.city}
+                        onChange={(e) =>
+                          setHospitalForm((prev) => ({
+                            ...prev,
+                            city: e.target.value,
+                          }))
+                        }
+                        placeholder="Ví dụ: TP. Hồ Chí Minh, Hà Nội..."
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Địa chỉ cụ thể
+                      </label>
+                      <input
+                        type="text"
+                        value={hospitalForm.address}
+                        onChange={(e) =>
+                          setHospitalForm((prev) => ({
+                            ...prev,
+                            address: e.target.value,
+                          }))
+                        }
+                        placeholder="Số nhà, đường, phường/xã..."
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Số điện thoại
+                      </label>
+                      <input
+                        type="text"
+                        value={hospitalForm.phone}
+                        onChange={(e) =>
+                          setHospitalForm((prev) => ({
+                            ...prev,
+                            phone: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={hospitalForm.email}
+                        onChange={(e) =>
+                          setHospitalForm((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  {/* Chọn nhiều chuyên khoa cho bệnh viện */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Chuyên khoa áp dụng
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map((cat) => {
+                        const checked = hospitalForm.categoryIds?.includes(
+                          cat.id,
+                        );
+                        return (
+                          <label
+                            key={cat.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 border rounded-full text-xs cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300"
+                              checked={!!checked}
+                              onChange={(e) => {
+                                setHospitalForm((prev) => {
+                                  const current = prev.categoryIds || [];
+                                  if (e.target.checked) {
+                                    return {
+                                      ...prev,
+                                      categoryIds: [...current, cat.id],
+                                    };
+                                  }
+                                  return {
+                                    ...prev,
+                                    categoryIds: current.filter(
+                                      (id) => id !== cat.id,
+                                    ),
+                                  };
+                                });
+                              }}
+                            />
+                            <span>{cat.name}</span>
+                          </label>
+                        );
+                      })}
+                      {!categories.length && (
+                        <span className="text-xs text-slate-400">
+                          Chưa có dữ liệu chuyên khoa
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Mô tả bệnh viện
+                    </label>
+                    <ReactQuill
+                      theme="snow"
+                      value={hospitalForm.description}
+                      onChange={(val) =>
+                        setHospitalForm((prev) => ({
+                          ...prev,
+                          description: val,
+                        }))
+                      }
+                      className="bg-white rounded-lg"
                     />
-                    <span>{cat.name}</span>
-                  </label>
-                );
-              })}
-              {!categories.length && (
-                <span className="text-xs text-slate-400">
-                  Chưa có dữ liệu chuyên khoa
-                </span>
-              )}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Mô tả bệnh viện
-            </label>
-            <ReactQuill
-              theme="snow"
-              value={hospitalForm.description}
-              onChange={(val) =>
-                setHospitalForm((prev) => ({ ...prev, description: val }))
-              }
-              className="bg-white rounded-lg"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={resetForm}
-            >
-              Hủy
-            </Button>
-            <Button type="submit" variant="primary">
-              Lưu thay đổi
-            </Button>
-          </div>
-        </form>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={resetForm}
+                    >
+                      Hủy
+                    </Button>
+                    <Button type="submit" variant="primary">
+                      Lưu thay đổi
+                    </Button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
@@ -589,10 +610,10 @@ export default function HospitalManagement() {
           {loadingHospitals && <CardSkeleton count={4} />}
           {!loadingHospitals && filteredHospitals.length === 0 && (
             <div className="bg-white border border-slate-100 rounded-xl">
-              <EmptyState 
-                icon={Inbox} 
-                title="Chưa có cơ sở y tế nào" 
-                description="Không tìm thấy cơ sở y tế nào phù hợp với bộ lọc." 
+              <EmptyState
+                icon={Inbox}
+                title="Chưa có cơ sở y tế nào"
+                description="Không tìm thấy cơ sở y tế nào phù hợp với bộ lọc."
               />
             </div>
           )}
@@ -605,7 +626,11 @@ export default function HospitalManagement() {
                 <div>
                   <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                     {hospital.logo_url ? (
-                      <img src={hospital.logo_url} className="w-8 h-8 rounded-md object-cover border" alt="" />
+                      <img
+                        src={hospital.logo_url}
+                        className="w-8 h-8 rounded-md object-cover border"
+                        alt=""
+                      />
                     ) : (
                       <div className="w-8 h-8 rounded-md bg-slate-100 border flex items-center justify-center">
                         <Building className="w-4 h-4 text-slate-400" />
@@ -681,35 +706,47 @@ export default function HospitalManagement() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
-                <h3 className="text-xl font-semibold text-slate-800">Thông tin cơ sở y tế</h3>
-                <button 
+                <h3 className="text-xl font-semibold text-slate-800">
+                  Thông tin cơ sở y tế
+                </h3>
+                <button
                   onClick={() => setViewingHospital(null)}
                   className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors"
                 >
                   <Eye className="w-5 h-5 hidden" />
-                  <span className="text-xl font-bold leading-none">&times;</span>
+                  <span className="text-xl font-bold leading-none">
+                    &times;
+                  </span>
                 </button>
               </div>
-              
+
               <div className="p-6 overflow-y-auto">
                 <div className="flex items-start gap-6 mb-8">
                   <div className="w-24 h-24 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-sm flex items-center justify-center p-1">
                     {viewingHospital.logo_url ? (
-                      <img src={viewingHospital.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                      <img
+                        src={viewingHospital.logo_url}
+                        alt="Logo"
+                        className="w-full h-full object-contain"
+                      />
                     ) : (
                       <Building className="w-10 h-10 text-slate-300" />
                     )}
                   </div>
                   <div>
-                    <h4 className="text-2xl font-bold text-slate-900 mb-1">{viewingHospital.name}</h4>
+                    <h4 className="text-2xl font-bold text-slate-900 mb-1">
+                      {viewingHospital.name}
+                    </h4>
                     <div className="flex items-center gap-2 mb-3">
                       {(viewingHospital.is_active ?? true) ? (
                         <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold uppercase tracking-wide flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Đang hoạt động
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>{" "}
+                          Đang hoạt động
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold uppercase tracking-wide flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-rose-500"></span> Đang khóa
+                          <span className="w-2 h-2 rounded-full bg-rose-500"></span>{" "}
+                          Đang khóa
                         </span>
                       )}
                       {viewingHospital.main_specialty && (
@@ -726,34 +763,52 @@ export default function HospitalManagement() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Liên hệ</p>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
+                      Liên hệ
+                    </p>
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-slate-500 text-sm">Điện thoại:</span>
-                        <span className="font-medium text-slate-900">{viewingHospital.phone || 'Chưa cập nhật'}</span>
+                        <span className="text-slate-500 text-sm">
+                          Điện thoại:
+                        </span>
+                        <span className="font-medium text-slate-900">
+                          {viewingHospital.phone || "Chưa cập nhật"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500 text-sm">Email:</span>
-                        <span className="font-medium text-slate-900">{viewingHospital.email || 'Chưa cập nhật'}</span>
+                        <span className="font-medium text-slate-900">
+                          {viewingHospital.email || "Chưa cập nhật"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500 text-sm">Khu vực:</span>
-                        <span className="font-medium text-slate-900">{viewingHospital.city || 'Chưa cập nhật'}</span>
+                        <span className="font-medium text-slate-900">
+                          {viewingHospital.city || "Chưa cập nhật"}
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Chuyên khoa áp dụng</p>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
+                      Chuyên khoa áp dụng
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {viewingHospital.categories && viewingHospital.categories.length > 0 ? (
-                        viewingHospital.categories.map(cat => (
-                          <span key={cat.id} className="px-2 py-1 bg-white border border-slate-200 text-slate-700 text-xs rounded-md shadow-sm">
+                      {viewingHospital.categories &&
+                      viewingHospital.categories.length > 0 ? (
+                        viewingHospital.categories.map((cat) => (
+                          <span
+                            key={cat.id}
+                            className="px-2 py-1 bg-white border border-slate-200 text-slate-700 text-xs rounded-md shadow-sm"
+                          >
                             {cat.name}
                           </span>
                         ))
                       ) : (
-                        <span className="text-sm text-slate-400 italic">Chưa có chuyên khoa nào</span>
+                        <span className="text-sm text-slate-400 italic">
+                          Chưa có chuyên khoa nào
+                        </span>
                       )}
                     </div>
                   </div>
@@ -761,17 +816,26 @@ export default function HospitalManagement() {
 
                 {viewingHospital.description && (
                   <div className="border-t border-slate-100 pt-6">
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Giới thiệu Bệnh viện</p>
-                    <div 
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
+                      Giới thiệu Bệnh viện
+                    </p>
+                    <div
                       className="text-sm text-slate-700 prose prose-sm max-w-none bg-slate-50 p-4 rounded-xl border border-slate-100"
-                      dangerouslySetInnerHTML={{ __html: viewingHospital.description }}
+                      dangerouslySetInnerHTML={{
+                        __html: viewingHospital.description,
+                      }}
                     />
                   </div>
                 )}
               </div>
-              
+
               <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-2">
-                <Button variant="outline" onClick={() => handleEditHospital(viewingHospital)}>Chỉnh sửa</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleEditHospital(viewingHospital)}
+                >
+                  Chỉnh sửa
+                </Button>
                 <Button onClick={() => setViewingHospital(null)}>Đóng</Button>
               </div>
             </div>
