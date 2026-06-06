@@ -38,7 +38,8 @@ export default function BannerManagement() {
     try {
       setLoading(true);
       const data = await getHospitalBanners();
-      setBanners(data || []);
+      const sortedData = (data || []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      setBanners(sortedData);
     } catch (error) {
       showError(error.message || "Lỗi tải banner");
     } finally {
@@ -186,8 +187,11 @@ export default function BannerManagement() {
           <h1 className="text-2xl font-bold text-slate-800">
             Quản lý banner bệnh viện
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 mt-1">
             Admin hospital có thể tạo, cập nhật, bật/tắt và xóa banner.
+          </p>
+          <p className="text-sm font-medium text-emerald-600 mt-1">
+            Tổng số: {banners.length} banner
           </p>
         </div>
 
@@ -331,6 +335,9 @@ export default function BannerManagement() {
                   />
                 </div>
               </div>
+              <p className="text-[11px] text-slate-500 italic mt-0 mb-2">
+                * Để trống Ngày kết thúc nếu muốn Banner hiển thị vô thời hạn. Các banner hết hạn sẽ tự động bị ẩn đi.
+              </p>
 
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -382,52 +389,63 @@ export default function BannerManagement() {
             {loading && <p className="text-sm text-slate-500">Đang tải...</p>}
 
             <div className="space-y-4">
-              {banners.map((banner) => (
+              {banners.map((banner, index) => (
                 <div
                   key={banner.id}
-                  className="overflow-hidden rounded-xl border bg-white"
+                  className="flex overflow-hidden rounded-xl border bg-white hover:shadow-sm transition-shadow"
                 >
                   <img
                     src={banner.image_url}
                     alt={banner.title}
-                    className="h-44 w-full object-cover"
+                    className="w-32 h-auto object-cover shrink-0"
                   />
 
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold text-slate-800">
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-3 mb-1">
+                        <h3 className="font-semibold text-slate-800 line-clamp-1 flex items-center gap-2">
+                          <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-xs">#{index + 1}</span>
                           {banner.title}
                         </h3>
-                        <p className="text-sm text-slate-500">
-                          {banner.description || "Không có mô tả"}
-                        </p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] shrink-0 font-medium ${
+                            !banner.is_active
+                              ? "bg-slate-100 text-slate-600"
+                              : banner.end_date && new Date(banner.end_date) < new Date()
+                              ? "bg-red-100 text-red-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {!banner.is_active
+                            ? "Inactive"
+                            : banner.end_date && new Date(banner.end_date) < new Date()
+                            ? "Hết hạn"
+                            : "Active"}
+                        </span>
                       </div>
-
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs ${
-                          banner.is_active
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {banner.is_active ? "Active" : "Inactive"}
-                      </span>
+                      <p className="text-xs text-slate-500 line-clamp-2 mb-2">
+                        {banner.description || "Không có mô tả"}
+                      </p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                        <p>Ưu tiên: <b>{banner.priority}</b></p>
+                        {banner.doctor_id && <p>BS ID: <b>{banner.doctor_id}</b></p>}
+                        {banner.category_id && <p>CK ID: <b>{banner.category_id}</b></p>}
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 mt-1">
+                        <p>Bắt đầu: <b>{banner.start_date ? new Date(banner.start_date).toLocaleDateString("vi-VN") : "Ngay lập tức"}</b></p>
+                        <p>Kết thúc: <b className={!banner.end_date || new Date(banner.end_date) > new Date() ? "text-emerald-600" : "text-red-500"}>
+                          {banner.end_date ? new Date(banner.end_date).toLocaleDateString("vi-VN") : "Không giới hạn"}
+                        </b></p>
+                      </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">
-                      <p>Priority: {banner.priority}</p>
-                      <p>Doctor ID: {banner.doctor_id || "-"}</p>
-                      <p>Category ID: {banner.category_id || "-"}</p>
-                      <p>URL: {banner.redirect_url || "-"}</p>
-                    </div>
-
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-3 flex gap-2 justify-end">
                       <Button
                         variant="outline"
                         size="sm"
                         icon={Edit3}
                         onClick={() => handleEdit(banner)}
+                        className="py-1 px-2 h-7 text-xs"
                       >
                         Sửa
                       </Button>
@@ -437,6 +455,7 @@ export default function BannerManagement() {
                         size="sm"
                         icon={Trash2}
                         onClick={() => handleDelete(banner.id)}
+                        className="py-1 px-2 h-7 text-xs"
                       >
                         Xóa
                       </Button>

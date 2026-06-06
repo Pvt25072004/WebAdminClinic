@@ -3,13 +3,13 @@ import Button from "../components/Button";
 import { Plus, Edit3, Trash2, Eye, ToggleLeft, ToggleRight, DollarSign, Clock } from "lucide-react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
-import { getAllServicePackages, createServicePackage } from "../services/admin.servicepackages.api";
+import { getAllServicePackages, createServicePackage, updateServicePackage, deleteServicePackage } from "../services/admin.servicepackages.api";
 import { useNotification } from "../contexts/NotificationContext";
 import { uploadUserImage } from "../services/api";
 import { Image as ImageIcon } from "lucide-react";
 
 export default function ServicePackageManagement() {
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess, showError, confirm } = useNotification();
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(false);
   
@@ -82,6 +82,34 @@ export default function ServicePackageManagement() {
     setShowForm(true);
   };
 
+  const handleEdit = (pkg) => {
+    setFormData({
+      id: pkg.id,
+      name: pkg.name || "",
+      code: pkg.code || "",
+      description: pkg.description || "",
+      fixed_price: pkg.fixed_price || 0,
+      duration_minutes: pkg.duration_minutes || 30,
+      is_active: pkg.is_active ?? true,
+      requires_fasting: pkg.requires_fasting ?? false,
+      image_url: pkg.image_url || "",
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (pkg) => {
+    const isConfirm = await confirm("Xác nhận xóa", `Bạn có chắc muốn xóa gói khám "${pkg.name}"?`);
+    if (!isConfirm) return;
+
+    try {
+      await deleteServicePackage(pkg.id);
+      showSuccess("Đã xóa gói khám thành công!");
+      void loadData();
+    } catch (error) {
+      showError("Lỗi khi xóa: " + error.message);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -102,16 +130,23 @@ export default function ServicePackageManagement() {
     
     try {
       setSubmitting(true);
-      await createServicePackage({
+      const payload = {
         ...formData,
         fixed_price: Number(formData.fixed_price),
         duration_minutes: Number(formData.duration_minutes),
-      });
-      showSuccess("Đã tạo gói khám thành công!");
+      };
+      
+      if (formData.id) {
+        await updateServicePackage(formData.id, payload);
+        showSuccess("Đã cập nhật gói khám thành công!");
+      } else {
+        await createServicePackage(payload);
+        showSuccess("Đã tạo gói khám thành công!");
+      }
       setShowForm(false);
       void loadData();
     } catch (e) {
-      showError("Lỗi khi tạo gói khám: " + e.message);
+      showError("Lỗi khi lưu gói khám: " + e.message);
     } finally {
       setSubmitting(false);
     }
@@ -140,6 +175,9 @@ export default function ServicePackageManagement() {
           <p className="text-sm text-slate-500">
             Quản lý các gói khám sức khỏe tổng quát, tầm soát
           </p>
+          <p className="text-sm font-medium text-emerald-600 mt-1">
+            Tổng số: {packages.length} gói khám
+          </p>
         </div>
         {!showForm && (
           <Button variant="primary" size="sm" icon={Plus} onClick={handleCreateNew}>
@@ -150,7 +188,7 @@ export default function ServicePackageManagement() {
 
       {showForm ? (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-100 mb-6">
-          <h3 className="text-lg font-bold mb-4">Thêm Gói Khám Mới</h3>
+          <h3 className="text-lg font-bold mb-4">{formData.id ? "Cập Nhật Gói Khám" : "Thêm Gói Khám Mới"}</h3>
           
           <input
             type="file"
@@ -319,54 +357,69 @@ export default function ServicePackageManagement() {
               Chưa có gói khám nào. Hãy tạo mới!
             </div>
           )}
-          {!loading && packages.map((pkg) => (
-            <div key={pkg.id} className="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
-              <div className="p-5">
-                <div className="flex items-start gap-4 mb-2">
-                  {pkg.image_url ? (
-                    <img src={pkg.image_url} className="w-12 h-12 rounded-lg object-cover border" alt="" />
+          {!loading && packages.map((pkg, index) => (
+            <div key={pkg.id} className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-emerald-200 transition-all duration-300">
+              <div className="relative h-48 bg-slate-100 overflow-hidden shrink-0">
+                {pkg.image_url ? (
+                  <img src={pkg.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={pkg.name} />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-slate-50">
+                    <ImageIcon className="w-12 h-12 text-slate-300" />
+                  </div>
+                )}
+                <div className="absolute top-3 right-3 flex flex-col gap-2">
+                  {pkg.is_active ? (
+                    <span className="bg-emerald-500/90 backdrop-blur text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">Đang bán</span>
                   ) : (
-                    <div className="w-12 h-12 rounded-lg bg-slate-100 border flex items-center justify-center shrink-0">
-                      <ImageIcon className="w-5 h-5 text-slate-400" />
-                    </div>
+                    <span className="bg-slate-500/90 backdrop-blur text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">Tạm dừng</span>
                   )}
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-lg text-slate-900 line-clamp-2 leading-tight">{pkg.name}</h3>
-                      <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600 ml-2 shrink-0">
-                        {pkg.code}
-                      </span>
-                    </div>
+                </div>
+              </div>
+              
+              <div className="p-5 flex-1 flex flex-col">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-0.5 rounded">#{index + 1}</span>
+                    <h3 className="font-bold text-lg text-slate-900 line-clamp-2 leading-tight group-hover:text-emerald-700 transition-colors">
+                      {pkg.name}
+                    </h3>
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-emerald-600 font-bold text-lg">
-                    {Number(pkg.fixed_price).toLocaleString("vi-VN")} đ
+                <div className="text-sm text-slate-500 mb-4 line-clamp-2" dangerouslySetInnerHTML={{ __html: pkg.description || "Chưa có mô tả" }}></div>
+                
+                <div className="mt-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-emerald-600 font-bold text-xl">
+                      {Number(pkg.fixed_price).toLocaleString("vi-VN")} đ
+                    </div>
+                    <div className="flex items-center text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md text-sm font-medium border border-slate-100">
+                      <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {pkg.duration_minutes} phút
+                    </div>
                   </div>
-                  <div className="text-xs flex items-center text-slate-500 bg-slate-50 px-2 py-1 rounded">
-                    <Clock className="w-3 h-3 mr-1" /> {pkg.duration_minutes} phút
+                  
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
+                      Mã: {pkg.code}
+                    </span>
+                    {pkg.requires_fasting && (
+                      <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md flex items-center">
+                        ⚠️ Nhịn ăn
+                      </span>
+                    )}
+                    <span className="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md flex items-center">
+                      🛒 {pkg.booking_count || 0} lượt đặt
+                    </span>
                   </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {pkg.is_active ? (
-                    <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded flex items-center gap-1">
-                      <ToggleRight className="w-3 h-3" /> Đang bán
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded flex items-center gap-1">
-                      <ToggleLeft className="w-3 h-3" /> Tạm dừng
-                    </span>
-                  )}
-                  {pkg.requires_fasting && (
-                    <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded">
-                      ⚠️ Cần nhịn ăn
-                    </span>
-                  )}
-                  <span className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded">
-                    {pkg.booking_count || 0} lượt đặt
-                  </span>
+                  
+                  <div className="flex gap-2 pt-4 border-t border-slate-100">
+                    <Button variant="outline" className="flex-1 justify-center" onClick={() => handleEdit(pkg)}>
+                      <Edit3 className="w-4 h-4 mr-2" /> Sửa
+                    </Button>
+                    <Button variant="danger" className="px-3" onClick={() => handleDelete(pkg)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

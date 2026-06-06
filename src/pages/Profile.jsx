@@ -32,7 +32,11 @@ export default function Profile() {
     e.preventDefault();
     setLoading(true);
     try {
-      await updateProfile(formData);
+      const payload = { ...formData };
+      if (payload.gender === "") payload.gender = null;
+      if (payload.phone === "") payload.phone = null;
+      if (payload.address === "") payload.address = null;
+      await updateProfile(payload);
       showSuccess("Cập nhật thông tin thành công!");
     } catch (error) {
       showError("Cập nhật thất bại: " + error.message);

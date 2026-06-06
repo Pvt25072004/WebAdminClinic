@@ -1,10 +1,15 @@
-import { Bell, Megaphone, Send } from "lucide-react";
+import { Bell, Megaphone, Send, Users } from "lucide-react";
 import Button from "../components/Button";
 import { formatDate } from "../utils/helpers";
 import React, { useEffect, useState } from "react";
 import { getSystemNotifications, createNotification } from "../services/admin.notifications.api";
+import { useAuth } from "../contexts/AuthContext";
+import { getUsers } from "../services/admin.users.api";
+import { getDoctors } from "../services/admin.doctors.api";
 
 export default function NotificationManagement() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -13,12 +18,15 @@ export default function NotificationManagement() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [type, setType] = useState("system");
+  const [target, setTarget] = useState("all"); // "all", "all_role", or specific user_id
+  const [recipients, setRecipients] = useState([]);
 
   const loadNotifications = async () => {
     try {
       setLoading(true);
       const data = await getSystemNotifications();
-      setNotifications(Array.isArray(data) ? data : []);
+      const sortedData = (Array.isArray(data) ? data : []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      setNotifications(sortedData);
     } catch (e) {
       console.error("Load notifications error:", e);
     } finally {
@@ -26,9 +34,29 @@ export default function NotificationManagement() {
     }
   };
 
+  const loadRecipients = async () => {
+    try {
+      if (user?.role === "admin") {
+        const res = await getUsers(1, 1000);
+        const allUsers = res.data || res;
+        const adminHos = Array.isArray(allUsers) ? allUsers.filter(u => u.role === "admin_hospital") : [];
+        setRecipients(adminHos);
+      } else if (user?.role === "admin_hospital" && user?.hospital_id) {
+        const res = await getDoctors(user.hospital_id, 1, 1000);
+        const doctors = res.data || res;
+        setRecipients(Array.isArray(doctors) ? doctors : []);
+      }
+    } catch (e) {
+      console.error("Load recipients error:", e);
+    }
+  };
+
   useEffect(() => {
     void loadNotifications();
-  }, []);
+    if (user) {
+      void loadRecipients();
+    }
+  }, [user]);
 
   const handleSendNotification = async (e) => {
     e.preventDefault();
@@ -39,16 +67,29 @@ export default function NotificationManagement() {
 
     try {
       setIsSubmitting(true);
-      await createNotification({
-        title,
-        body,
-        type,
-        // no user_id => system broadcast
-      });
+      
+      if (target === "all") {
+        // System broadcast to everyone
+        await createNotification({ title, body, type });
+      } else if (target === "all_role") {
+        // Send to all in recipients list individually
+        if (recipients.length === 0) {
+          alert("Không có người nhận nào trong danh sách.");
+          return;
+        }
+        await Promise.all(recipients.map(recipient => 
+          createNotification({ title, body, type, user_id: recipient.id || recipient.user_id })
+        ));
+      } else {
+        // Send to specific user
+        await createNotification({ title, body, type, user_id: Number(target) });
+      }
+      
       alert("Gửi thông báo thành công!");
       setTitle("");
       setBody("");
       setType("system");
+      setTarget("all");
       loadNotifications();
     } catch (err) {
       alert(err.message || "Đã xảy ra lỗi khi gửi thông báo.");
@@ -58,9 +99,10 @@ export default function NotificationManagement() {
   };
 
   return (
-    <div className="grid grid-cols-[1fr_2fr] gap-8 max-xl:grid-cols-1">
+    <div className={`grid gap-8 ${isAdmin ? "grid-cols-[1fr_2fr] max-xl:grid-cols-1" : "grid-cols-1"}`}>
       {/* Cột trái: Form gửi thông báo mới */}
-      <div className="flex flex-col gap-6">
+      {isAdmin && (
+        <div className="flex flex-col gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -85,6 +127,27 @@ export default function NotificationManagement() {
                 <option value="system">Thông báo hệ thống (System)</option>
                 <option value="promotion">Khuyến mãi (Promotion)</option>
                 <option value="alert">Cảnh báo khẩn cấp (Alert)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Đối tượng nhận thông báo
+              </label>
+              <select
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 bg-white"
+              >
+                <option value="all">Tất cả người dùng (Global Broadcast)</option>
+                <option value="all_role">
+                  {user?.role === "admin" ? "Tất cả Admin Bệnh viện" : "Tất cả Bác sĩ"}
+                </option>
+                {recipients.map(r => (
+                  <option key={r.id || r.user_id} value={r.id || r.user_id}>
+                    {r.full_name || r.user?.full_name} ({r.email || r.user?.email})
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -124,6 +187,7 @@ export default function NotificationManagement() {
           </form>
         </div>
       </div>
+      )}
 
       {/* Cột phải: Lịch sử Broadcast */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
@@ -131,6 +195,9 @@ export default function NotificationManagement() {
           <div>
             <h2 className="text-lg font-bold text-slate-900">Lịch sử Broadcast</h2>
             <p className="text-sm text-slate-500">Các thông báo đã gửi cho tất cả người dùng</p>
+            <p className="text-sm font-medium text-emerald-600 mt-1">
+              Tổng số: {notifications.length} thông báo
+            </p>
           </div>
           <div className="p-2 bg-slate-50 text-slate-400 rounded-lg">
             <Bell className="w-5 h-5" />
@@ -146,7 +213,7 @@ export default function NotificationManagement() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {notifications.map((notif) => (
+              {notifications.map((notif, index) => (
                 <div key={notif.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex gap-4">
                   <div className="mt-1">
                     <div className={`p-2 rounded-full ${
@@ -159,7 +226,10 @@ export default function NotificationManagement() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <h4 className="font-semibold text-slate-900">{notif.title}</h4>
+                      <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                        <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-xs">#{index + 1}</span>
+                        {notif.title}
+                      </h4>
                       <span className="text-xs text-slate-400 whitespace-nowrap">
                         {notif.created_at ? formatDate(notif.created_at) : "N/A"}
                       </span>
@@ -167,8 +237,15 @@ export default function NotificationManagement() {
                     <p className="text-sm text-slate-600 line-clamp-2">
                       {notif.body}
                     </p>
-                    <div className="mt-2 text-xs font-medium text-slate-400 uppercase">
-                      Type: {notif.type || 'system'}
+                    <div className="mt-2 flex gap-2">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        notif.type === 'alert' ? 'bg-red-100 text-red-700' :
+                        notif.type === 'promotion' ? 'bg-amber-100 text-amber-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {notif.type === 'alert' ? 'Cảnh báo khẩn cấp' :
+                         notif.type === 'promotion' ? 'Khuyến mãi' : 'Hệ thống'}
+                      </span>
                     </div>
                   </div>
                 </div>

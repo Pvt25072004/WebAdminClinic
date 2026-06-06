@@ -6,10 +6,14 @@ const USERS_ENDPOINT = `${API_BASE_URL}/users`;
 
 
 
-export const getUsers = async (page = 1, limit = 10) => {
+export const getUsers = async (page = 1, limit = 10, filters = {}) => {
   const queryParams = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
+    ...(filters.role && filters.role !== 'all' && { role: filters.role }),
+    ...(filters.status && filters.status !== 'all' && { status: filters.status }),
+    ...(filters.region && filters.region !== 'all' && { region: filters.region }),
+    ...(filters.search && { search: filters.search })
   });
   
   const response = await fetch(`${USERS_ENDPOINT}?${queryParams.toString()}`, {

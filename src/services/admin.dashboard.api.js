@@ -12,3 +12,18 @@ export const getDashboardStats = async () => {
   });
   return handleResponse(response, "Không thể tải dữ liệu thống kê");
 };
+
+export const getAdminCharts = async ({ startDate, endDate, status } = {}) => {
+  const query = new URLSearchParams();
+  if (startDate) query.append("startDate", startDate);
+  if (endDate) query.append("endDate", endDate);
+  if (status) query.append("status", status);
+
+  const response = await fetch(`${DASHBOARD_ENDPOINT}/admin-charts?${query.toString()}`, {
+    headers: {
+      ...getAuthHeaders(),
+    },
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể tải dữ liệu biểu đồ");
+};

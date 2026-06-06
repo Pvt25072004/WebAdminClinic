@@ -123,7 +123,7 @@ export default function SchedulesManagement() {
       if (response && response.message) {
         alert(response.message);
       } else {
-        alert("Tạo lịch thành công! Trạng thái đang Chờ duyệt (Pending).");
+        alert("Tạo lịch thành công!");
       }
       setIsModalOpen(false);
       loadSchedules();

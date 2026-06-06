@@ -15,13 +15,19 @@ import {
 } from "../services/admin.users.api";
 import { getHospitals } from "../services/admin.hospitals.api";
 import { useNotification } from "../contexts/NotificationContext";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function UserManagement() {
+  const { user } = useAuth();
+  const isHospitalAdmin = user?.role === "admin_hospital" || user?.user_role === "admin_hospital";
   const queryClient = useQueryClient();
-  const { showSuccess, showError, confirm } = useNotification();
+  const { showSuccess, showError, confirm, prompt } = useNotification();
   const location = useLocation();
   
   const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [regionFilter, setRegionFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -34,6 +40,10 @@ export default function UserManagement() {
     email: "",
     password: "",
     phone: "",
+    address: "",
+    date_of_birth: "",
+    gender: "other",
+    id_card_number: "",
     hospital_id: "",
     role: "admin_hospital",
   });
@@ -47,10 +57,13 @@ export default function UserManagement() {
     select: (data) => (Array.isArray(data) ? data : []),
   });
 
+  // 1.5 Extract unique cities from hospitals for the region filter
+  const uniqueRegions = Array.from(new Set(hospitals.map(h => h.city?.name || h.city).filter(Boolean)));
+
   // 2. Fetch Users using React Query
   const { data: usersResponse, isLoading: loadingUsers } = useQuery({
-    queryKey: ["users", currentPage, limit],
-    queryFn: () => getUsers(currentPage, limit),
+    queryKey: ["users", currentPage, limit, roleFilter, statusFilter, regionFilter, search],
+    queryFn: () => getUsers(currentPage, limit, { role: roleFilter, status: statusFilter, region: regionFilter, search }),
   });
 
   const users = usersResponse?.data ? usersResponse.data : (Array.isArray(usersResponse) ? usersResponse : []);
@@ -67,11 +80,7 @@ export default function UserManagement() {
     }
   }, [location.state?.selectedUserId, users]);
 
-  const visibleUsers = users.filter((u) => {
-    if (u.role === "admin") return false; // Không hiển thị admin tổng
-    if (roleFilter === "all") return true;
-    return u.role === roleFilter;
-  });
+  const visibleUsers = users.filter((u) => u.role !== "admin");
 
   const availableHospitals = hospitals.filter(h => 
     !users.filter(u => u.role === "admin_hospital").some(u => String(u.hospital_id) === String(h.id) && u.id !== editingUserId)
@@ -93,6 +102,10 @@ export default function UserManagement() {
       email: user.email || "",
       password: "", // Leave blank unless they want to change it
       phone: user.phone || "",
+      address: user.address || "",
+      date_of_birth: user.date_of_birth ? user.date_of_birth.split('T')[0] : "",
+      gender: user.gender || "other",
+      id_card_number: user.id_card_number || "",
       hospital_id: user.hospital_id || "",
       role: user.role || "admin_hospital",
     });
@@ -118,17 +131,45 @@ export default function UserManagement() {
     onError: (e) => showError(e.message || "Không thể xóa người dùng"),
   });
 
-  const handleToggleUser = (user) => {
-    toggleMutation.mutate({ id: user.id, is_active: user.is_active });
+  const handleToggleUser = async (u) => {
+    if (isHospitalAdmin) {
+      const reason = await prompt(
+        u.is_active ? "Tạm ngưng tài khoản" : "Kích hoạt tài khoản",
+        `Nhập lý do ${u.is_active ? "tạm ngưng" : "kích hoạt"} tài khoản này (bắt buộc):`
+      );
+      if (!reason) {
+        if (reason === "") showError("Vui lòng nhập lý do!");
+        return;
+      }
+    } else {
+      const isConfirm = await confirm(
+        "Xác nhận thay đổi",
+        `Bạn có chắc muốn ${u.is_active ? "tạm ngưng" : "kích hoạt"} tài khoản này?`,
+        { confirmText: "Đồng ý" }
+      );
+      if (!isConfirm) return;
+    }
+    toggleMutation.mutate({ id: u.id, is_active: u.is_active });
   };
 
   const handleDeleteUser = async (id) => {
-    const isConfirm = await confirm(
-      "Xác nhận xóa tài khoản",
-      "Bạn có chắc muốn xóa tài khoản này? Hành động này không thể hoàn tác.",
-      { variant: "danger", confirmText: "Xóa" }
-    );
-    if (!isConfirm) return;
+    if (isHospitalAdmin) {
+      const reason = await prompt(
+        "Xóa tài khoản",
+        "Nhập lý do xóa tài khoản người dùng này (bắt buộc):"
+      );
+      if (!reason) {
+        if (reason === "") showError("Vui lòng nhập lý do!");
+        return;
+      }
+    } else {
+      const isConfirm = await confirm(
+        "Xác nhận xóa tài khoản",
+        "Bạn có chắc muốn xóa tài khoản này? Hành động này không thể hoàn tác.",
+        { variant: "danger", confirmText: "Xóa" }
+      );
+      if (!isConfirm) return;
+    }
     deleteMutation.mutate(id);
   };
 
@@ -143,6 +184,10 @@ export default function UserManagement() {
         email: "",
         password: "",
         phone: "",
+        address: "",
+        date_of_birth: "",
+        gender: "other",
+        id_card_number: "",
         hospital_id: "",
         role: "admin_hospital",
       });
@@ -153,12 +198,32 @@ export default function UserManagement() {
 
   const submitting = submitMutation.isPending;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const isHospitalAdmin = formData.role === "admin_hospital";
     if (!formData.full_name || !formData.email || (!editingUserId && !formData.password) || (isHospitalAdmin && !formData.hospital_id)) {
       showError("Vui lòng điền đầy đủ các thông tin bắt buộc.");
       return;
+    }
+    
+    if (editingUserId) {
+      if (isHospitalAdmin) {
+        const reason = await prompt(
+          "Xác nhận cập nhật",
+          "Nhập lý do cập nhật thông tin (bắt buộc):"
+        );
+        if (!reason) {
+          if (reason === "") showError("Vui lòng nhập lý do!");
+          return;
+        }
+      } else {
+        const isConfirm = await confirm(
+          "Xác nhận cập nhật",
+          "Bạn có chắc muốn lưu các thay đổi cho tài khoản này?",
+          { confirmText: "Lưu thay đổi" }
+        );
+        if (!isConfirm) return;
+      }
     }
     const payload = { ...formData };
     if (isHospitalAdmin) {
@@ -169,6 +234,10 @@ export default function UserManagement() {
     if (editingUserId && !payload.password) {
       delete payload.password; // Don't send empty password if editing
     }
+    if (!payload.date_of_birth) delete payload.date_of_birth;
+    if (!payload.address) delete payload.address;
+    if (!payload.id_card_number) delete payload.id_card_number;
+    
     submitMutation.mutate({ id: editingUserId, payload });
   };
 
@@ -180,6 +249,10 @@ export default function UserManagement() {
       email: "",
       password: "",
       phone: "",
+      address: "",
+      date_of_birth: "",
+      gender: "other",
+      id_card_number: "",
       hospital_id: "",
       role: "admin_hospital",
     });
@@ -196,14 +269,9 @@ export default function UserManagement() {
             Quản lý tất cả bác sĩ, bệnh nhân, và admin trên hệ thống
           </p>
         </div>
-        <Button size="sm" icon={Plus} onClick={() => {
-          if (showForm) {
-            handleCancel();
-          } else {
-            setShowForm(true);
-          }
-        }}>
-          {showForm ? "Đóng form" : "Thêm tài khoản"}
+        <Button onClick={() => setShowForm(!showForm)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Tạo tài khoản
         </Button>
       </div>
 
@@ -245,7 +313,7 @@ export default function UserManagement() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu {editingUserId ? "(Để trống nếu không đổi)" : "*"}</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu {editingUserId && "(Để trống nếu không đổi)"}</label>
               <input
                 type="password"
                 value={formData.password}
@@ -257,60 +325,152 @@ export default function UserManagement() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại</label>
               <input
-                type="text"
+                type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Giới tính</label>
+              <select
+                value={formData.gender}
+                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg bg-white"
+              >
+                <option value="male">Nam</option>
+                <option value="female">Nữ</option>
+                <option value="other">Khác</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Ngày sinh</label>
+              <input
+                type="date"
+                value={formData.date_of_birth}
+                onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">CCCD / CMND</label>
+              <input
+                type="text"
+                value={formData.id_card_number}
+                onChange={(e) => setFormData({ ...formData, id_card_number: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Địa chỉ</label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
             {formData.role === "admin_hospital" && (
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Cơ sở y tế (Bệnh viện) *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Chọn bệnh viện quản lý *</label>
                 <select
                   value={formData.hospital_id}
                   onChange={(e) => setFormData({ ...formData, hospital_id: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg bg-white"
                   required
                 >
-                  <option value="">-- Chọn bệnh viện quản lý --</option>
+                  <option value="">-- Chọn bệnh viện --</option>
                   {availableHospitals.map(h => (
                     <option key={h.id} value={h.id}>{h.name}</option>
                   ))}
+                  {/* If editing and the user has a hospital, it should be listed even if assigned */}
+                  {editingUserId && formData.hospital_id && !availableHospitals.find(h => h.id === Number(formData.hospital_id)) && (
+                     <option value={formData.hospital_id}>Bệnh viện ID: {formData.hospital_id} (Đang quản lý)</option>
+                  )}
                 </select>
+                {availableHospitals.length === 0 && !editingUserId && (
+                  <p className="text-xs text-amber-600 mt-1">Tất cả bệnh viện đã có Admin quản lý.</p>
+                )}
               </div>
             )}
-            <div className="md:col-span-2 flex justify-end mt-2 gap-2">
-              <Button type="button" variant="outline" onClick={handleCancel}>
+            <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+              <Button type="button" variant="outline" onClick={handleCancel} disabled={submitting}>
                 Hủy
               </Button>
-              <Button type="submit" variant="primary" disabled={submitting}>
-                {submitting ? "Đang xử lý..." : (editingUserId ? "Lưu thay đổi" : "Xác nhận tạo")}
+              <Button type="submit" disabled={submitting} className="flex items-center gap-2">
+                {submitting ? "Đang xử lý..." : "Lưu tài khoản"}
               </Button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="flex items-center gap-4 mb-4">
-        <label className="text-sm font-medium text-slate-700">Lọc theo vai trò:</label>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white min-w-[200px]"
-        >
-          <option value="all">Tất cả</option>
-          <option value="patient">Bệnh nhân</option>
-          <option value="doctor">Bác sĩ</option>
-          <option value="admin_hospital">Admin Bệnh viện</option>
-        </select>
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex flex-wrap gap-4 items-end">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-medium text-slate-500 mb-1">Tìm kiếm</label>
+          <input 
+            type="text" 
+            placeholder="Tên, Email, SĐT..." 
+            className="w-full px-3 py-2 border rounded-md text-sm outline-none focus:border-blue-500"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+          />
+        </div>
+        <div className="flex gap-4 mb-0">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Vai trò</label>
+            <select
+              value={roleFilter}
+              onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
+              className="border rounded-md px-3 py-2 text-sm outline-none focus:border-blue-500 min-w-[140px]"
+            >
+              <option value="all">Tất cả vai trò</option>
+              <option value="patient">Bệnh nhân</option>
+              <option value="doctor">Bác sĩ</option>
+              <option value="admin_hospital">Admin Bệnh viện</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Khu vực</label>
+            <select
+              value={regionFilter}
+              onChange={(e) => { setRegionFilter(e.target.value); setCurrentPage(1); }}
+              className="border rounded-md px-3 py-2 text-sm outline-none focus:border-blue-500 min-w-[140px]"
+            >
+              <option value="all">Tất cả khu vực</option>
+              {uniqueRegions.map((region, idx) => (
+                <option key={idx} value={region}>{region}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Trạng thái</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="border rounded-md px-3 py-2 text-sm outline-none focus:border-blue-500 min-w-[140px]"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Tạm ngưng</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setRoleFilter("all"); setRegionFilter("all"); setStatusFilter("all"); setCurrentPage(1); }}>
+              Xóa bộ lọc
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-slate-100">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-medium">
             <tr className="text-left">
+              <th className="py-3 px-4 text-center w-12">STT</th>
               <th className="py-3 px-4">Tên</th>
               <th className="py-3 px-4">Email</th>
+              <th className="py-3 px-4">SĐT</th>
               <th className="py-3 px-4">Vai trò</th>
               <th className="py-3 px-4">Bệnh viện</th>
               <th className="py-3 px-4 text-center">Trạng thái</th>
@@ -321,7 +481,7 @@ export default function UserManagement() {
             {loadingUsers && <TableSkeleton columns={6} rows={5} />}
             {!loadingUsers && visibleUsers.length === 0 && (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={8}>
                   <EmptyState 
                     icon={Inbox} 
                     title="Chưa có tài khoản nào" 
@@ -331,14 +491,19 @@ export default function UserManagement() {
               </tr>
             )}
             {!loadingUsers &&
-              visibleUsers.map((user) => {
+              visibleUsers.map((user, index) => {
                 const hosp = hospitals.find(h => String(h.id) === String(user.hospital_id));
+                const stt = (currentPage - 1) * limit + index + 1;
                 return (
                 <tr key={user.id} className="border-b border-slate-100 hover:bg-emerald-50/50 transition-colors last:border-0">
+                  <td className="py-3 px-4 text-center font-medium text-slate-500">
+                    {stt}
+                  </td>
                   <td className="py-3 px-4 font-medium text-slate-900">
                     {user.full_name}
                   </td>
                   <td className="py-3 px-4 text-slate-500">{user.email}</td>
+                  <td className="py-3 px-4 text-slate-500">{user.phone || '-'}</td>
                   <td className="py-3 px-4 text-slate-500">
                     <span className="px-2 py-1 rounded bg-slate-100 text-xs font-medium">
                       {getRoleLabel(user.role)}

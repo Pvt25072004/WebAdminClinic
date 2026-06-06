@@ -18,7 +18,7 @@ import { uploadUserImage } from "../services/api";
 
 export default function DoctorManagement() {
   const { user } = useAuth();
-  const { showSuccess, showError, confirm } = useNotification();
+  const { showSuccess, showError, confirm, prompt } = useNotification();
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [doctors, setDoctors] = useState([]);
@@ -86,7 +86,8 @@ export default function DoctorManagement() {
   const loadDoctors = async () => {
     try {
       setLoadingDoctors(true);
-      const responseData = await getDoctors(user?.hospital_id, currentPage, limit);
+      const currentHospitalId = user?.hospital_id || user?.hospital?.id;
+      const responseData = await getDoctors(currentHospitalId, currentPage, limit);
       const actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
       setDoctors(actualDoctors);
       if (responseData?.total) setTotalItems(responseData.total);
@@ -98,10 +99,29 @@ export default function DoctorManagement() {
     }
   };
   const handleToggleDoctor = async (doctor) => {
+    const actionName = doctor.is_active ? "Tạm khóa" : "Mở khóa";
+    
+    if (user?.role === 'admin_hospital') {
+      const reason = await prompt(
+        `${actionName} tài khoản bác sĩ`,
+        `Nhập lý do ${actionName.toLowerCase()} (bắt buộc):`
+      );
+      if (!reason) {
+        if (reason === "") showError("Lý do là bắt buộc!");
+        return; 
+      }
+    } else {
+      const isConfirm = await confirm(
+        `Xác nhận ${actionName.toLowerCase()}`,
+        `Bạn có chắc chắn muốn ${actionName.toLowerCase()} tài khoản bác sĩ này?`
+      );
+      if (!isConfirm) return;
+    }
+
     try {
       await toggleDoctorActive(doctor.id);
       showSuccess(
-        `Đã ${doctor.is_active ? "tạm khóa" : "mở khóa"} tài khoản bác sĩ`,
+        `Đã ${actionName.toLowerCase()} tài khoản bác sĩ`,
       );
       void loadDoctors();
     } catch (e) {
@@ -111,7 +131,7 @@ export default function DoctorManagement() {
 
   const handleDeleteDoctor = async (id) => {
     if (user?.role === 'admin_hospital') {
-      const reason = window.prompt("Nhập lý do hủy liên kết (lý do này sẽ được gửi email thông báo cho bác sĩ):");
+      const reason = await prompt("Hủy liên kết bác sĩ", "Nhập lý do hủy liên kết (lý do này sẽ được gửi email thông báo cho bác sĩ):");
       if (reason === null) return; // User cancelled prompt
 
       try {
@@ -151,7 +171,7 @@ export default function DoctorManagement() {
         experience_years: doctorForm.experience_years
           ? Number(doctorForm.experience_years)
           : 0,
-        hospital_id: user?.hospital_id,
+        hospital_id: user?.hospital_id || user?.hospital?.id,
       });
       setDoctorForm({
         name: "",
@@ -174,14 +194,16 @@ export default function DoctorManagement() {
       showError(e.message || "Không thể tạo bác sĩ");
     }
   };
+  const [showDoctorForm, setShowDoctorForm] = useState(false);
+
   useEffect(() => {
     void loadDoctors();
     void loadCategories();
-  }, [user?.hospital_id, currentPage, limit]);
+  }, [user?.hospital_id, user?.hospital?.id, currentPage, limit]);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">
             Quản lý bác sĩ
@@ -189,30 +211,44 @@ export default function DoctorManagement() {
           <p className="text-sm text-slate-500">
             Phê duyệt & khóa tài khoản bác sĩ
           </p>
+          <p className="text-sm font-medium text-emerald-600 mt-1">
+            Tổng số: {totalItems} bác sĩ
+          </p>
         </div>
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={() =>
-            setDoctorForm({
-              name: "",
-              specialty: "",
-              email: "",
-              phone: "",
-              password: "",
-              description: "",
-              category_id: "",
-              degree: "",
-              experience_years: "",
-              license_number: "",
-              license_file: "",
-              certificate_file: "",
-              cv_file: "",
-            })
-          }
-        >
-          Reset
-        </Button>
+        <div className="flex gap-3">
+          {showDoctorForm && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setDoctorForm({
+                  name: "",
+                  specialty: "",
+                  email: "",
+                  phone: "",
+                  password: "",
+                  description: "",
+                  category_id: "",
+                  degree: "",
+                  experience_years: "",
+                  license_number: "",
+                  license_file: "",
+                  certificate_file: "",
+                  cv_file: "",
+                })
+              }
+            >
+              Reset Form
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant={showDoctorForm ? "danger" : "primary"}
+            onClick={() => setShowDoctorForm(!showDoctorForm)}
+          >
+            {showDoctorForm ? "Đóng Form" : "Tạo Bác Sĩ Mới"}
+          </Button>
+        </div>
       </div>
 
       <input
@@ -224,7 +260,8 @@ export default function DoctorManagement() {
       />
 
       {/* Form tạo bác sĩ */}
-      <form onSubmit={handleSubmitDoctor} className="mb-6 grid gap-4">
+      {showDoctorForm && (
+        <form onSubmit={handleSubmitDoctor} className="mb-6 grid gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -467,6 +504,7 @@ export default function DoctorManagement() {
           </Button>
         </div>
       </form>
+      )}
 
       <div className="space-y-4">
         {loadingDoctors && <CardSkeleton count={4} />}
@@ -479,12 +517,13 @@ export default function DoctorManagement() {
             />
           </div>
         )}
-        {!loadingDoctors && doctors.map((doctor) => {
+        {!loadingDoctors && doctors.map((doctor, index) => {
           // Xử lý an toàn vì cấu trúc Doctor đã thay đổi (thông tin auth nằm trong doctor.user)
           const name = doctor.user?.full_name || doctor.name || "Chưa có tên";
           const email = doctor.user?.email || "Chưa có email";
           const phone = doctor.user?.phone || "Chưa có SĐT";
           const isActive = doctor.verification_status === "active";
+          const stt = (currentPage - 1) * limit + index + 1;
 
           return (
             <div
@@ -493,7 +532,10 @@ export default function DoctorManagement() {
             >
               <div className="flex justify-between gap-4">
                 <div>
-                  <h3 className="font-semibold text-slate-900">{name}</h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-0.5 rounded">#{stt}</span>
+                    <h3 className="font-semibold text-slate-900">{name}</h3>
+                  </div>
                   <p className="text-sm text-slate-500">
                     {doctor.specialty}
                     {doctor.category?.name

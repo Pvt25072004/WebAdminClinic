@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext, useCallback } from "react";
-import { CheckCircle2, AlertCircle, X, Info } from "lucide-react";
+import React, { createContext, useState, useContext, useCallback, useEffect } from "react";
+import { X } from "lucide-react";
+import { Toaster, toast } from "sonner";
 import Button from "../components/Button";
 
 const NotificationContext = createContext(null);
@@ -13,25 +14,24 @@ export const useNotification = () => {
 };
 
 export const NotificationProvider = ({ children }) => {
-  const [toasts, setToasts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [promptDialog, setPromptDialog] = useState(null);
 
-  const showToast = useCallback((message, type = "success") => {
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
+  // Lock body scroll when a dialog is open
+  useEffect(() => {
+    if (confirmDialog || promptDialog) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [confirmDialog, promptDialog]);
 
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000); // Tự động ẩn sau 4 giây
-  }, []);
-
-  const showSuccess = useCallback((message) => showToast(message, "success"), [showToast]);
-  const showError = useCallback((message) => showToast(message, "error"), [showToast]);
-  const showInfo = useCallback((message) => showToast(message, "info"), [showToast]);
-
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  const showSuccess = useCallback((message) => toast.success(message), []);
+  const showError = useCallback((message) => toast.error(message), []);
+  const showInfo = useCallback((message) => toast.info(message), []);
 
   const confirm = useCallback((title, message, options = {}) => {
     return new Promise((resolve) => {
@@ -53,51 +53,39 @@ export const NotificationProvider = ({ children }) => {
     });
   }, []);
 
+  const prompt = useCallback((title, message, options = {}) => {
+    return new Promise((resolve) => {
+      setPromptDialog({
+        title,
+        message,
+        placeholder: options.placeholder || "Nhập thông tin...",
+        defaultValue: options.defaultValue || "",
+        confirmText: options.confirmText || "Xác nhận",
+        cancelText: options.cancelText || "Hủy",
+        onConfirm: (inputValue) => {
+          setPromptDialog(null);
+          resolve(inputValue);
+        },
+        onCancel: () => {
+          setPromptDialog(null);
+          resolve(null);
+        },
+      });
+    });
+  }, []);
+
   return (
-    <NotificationContext.Provider value={{ showSuccess, showError, showInfo, confirm }}>
+    <NotificationContext.Provider value={{ showSuccess, showError, showInfo, confirm, prompt }}>
       {children}
 
-      {/* Toasts Container */}
-      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto flex items-center p-4 bg-white border shadow-lg rounded-lg transform transition-all duration-300 ${
-              toast.type === "success"
-                ? "border-emerald-100"
-                : toast.type === "error"
-                ? "border-l-4 border-l-red-500 border-red-100"
-                : "border-emerald-100"
-            }`}
-          >
-            <div className="flex-shrink-0 mr-3">
-              {toast.type === "success" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
-              {toast.type === "error" && <AlertCircle className="w-5 h-5 text-red-500" />}
-              {toast.type === "info" && <Info className="w-5 h-5 text-emerald-500" />}
-            </div>
-            <div className="flex-1">
-              <p className={`text-sm font-medium ${
-                toast.type === "error" ? "text-red-800" : "text-slate-800"
-              }`}>
-                {toast.message}
-              </p>
-            </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="flex-shrink-0 ml-4 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ))}
-      </div>
+      <Toaster position="top-right" richColors closeButton />
 
       {/* Confirm Dialog Modal */}
       {confirmDialog && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={confirmDialog.onCancel}></div>
-          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={confirmDialog.onCancel}></div>
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-zoom-in">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
               {confirmDialog.title}
             </h3>
             <p className="text-sm text-slate-600 mb-6">
@@ -114,6 +102,44 @@ export const NotificationProvider = ({ children }) => {
                 {confirmDialog.confirmText}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt Dialog Modal */}
+      {promptDialog && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={promptDialog.onCancel}></div>
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-zoom-in">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
+              {promptDialog.title}
+            </h3>
+            {promptDialog.message && (
+              <p className="text-sm text-slate-600 mb-4">
+                {promptDialog.message}
+              </p>
+            )}
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              promptDialog.onConfirm(e.target.promptInput.value);
+            }}>
+              <input
+                name="promptInput"
+                type="text"
+                autoFocus
+                defaultValue={promptDialog.defaultValue}
+                placeholder={promptDialog.placeholder}
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-6"
+              />
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={promptDialog.onCancel}>
+                  {promptDialog.cancelText}
+                </Button>
+                <Button type="submit" variant="primary">
+                  {promptDialog.confirmText}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -11,13 +11,6 @@ export const getNews = async () => {
   return handleResponse(response, "Không thể tải danh sách tin tức");
 };
 
-export const getNewsById = async (id) => {
-  const response = await fetch(`${NEWS_ENDPOINT}/${id}`, {
-    headers: { ...getAuthHeaders() },
-    credentials: "include",
-  });
-  return handleResponse(response, "Không thể tải tin tức");
-};
 
 export const createNews = async (payload) => {
   const response = await fetch(NEWS_ENDPOINT, {

@@ -84,23 +84,36 @@ export default function SavingsCard({ timeOptions, paymentsData = [], chartData 
             <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.6} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} dy={10} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#64748b', fontWeight: 500 }} dy={15} />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 12, fill: '#94a3b8' }}
-                tickFormatter={(value) => `${value / 1000000}M`}
-                width={60}
+                tick={{ fontSize: 13, fill: '#64748b', fontWeight: 500 }}
+                tickFormatter={(value) => `${value >= 1000000 ? value / 1000000 + 'M' : value >= 1000 ? value / 1000 + 'K' : value}`}
+                width={50}
+                dx={-10}
               />
               <Tooltip 
-                formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)}
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-white/90 backdrop-blur-md border border-slate-100 p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+                        <p className="text-slate-500 text-sm font-medium mb-1">{label}</p>
+                        <p className="text-emerald-600 font-bold text-lg">
+                          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payload[0].value)}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
               />
-              <Area type="monotone" dataKey="total" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+              <Area type="monotone" dataKey="total" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorTotal)" activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 3, className: 'drop-shadow-md' }} />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

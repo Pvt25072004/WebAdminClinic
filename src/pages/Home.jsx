@@ -12,8 +12,10 @@ import {
   FaCalendarCheck,
   FaStethoscope,
   FaUser,
+  FaStar,
 } from "react-icons/fa";
 import { useEffect, useState } from "react";
+import { getHospitalRegistrations } from "../services/admin.hospital.registration.api";
 import { getHospitals } from "../services/admin.hospitals.api";
 import { getUsers } from "../services/admin.users.api";
 import { getDoctors } from "../services/admin.doctors.api";
@@ -21,6 +23,7 @@ import { getAllPayments, getDashboardStats as getPaymentStats } from "../service
 import { getCategories } from "../services/admin.categories.api";
 import { getAllAppointments } from "../services/admin.appointments.api";
 import { getDashboardStats } from "../services/admin.dashboard.api";
+import { getAllReviews } from "../services/reviews.api";
 import { useNavigate } from "react-router-dom";
 
 export default function Home() {
@@ -40,34 +43,47 @@ export default function Home() {
     totalHospitals: 0,
     totalUsers: 0,
     totalAppointments: 0,
+    averageStars: "0.0",
     paymentsData: [],
     appointmentsData: [],
     hospitalsData: [],
     recentItems: [],
     alerts: [],
     recentAppointments: [],
+    registrationRequests: [],
     loading: true,
   });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [hospitals, users, doctors, payments, appointments, statsData, paymentStats] = await Promise.all([
+        const hospitalId = user?.hospital_id || user?.hospital?.id;
+        const [hospitals, users, doctors, payments, appointments, statsData, paymentStats, categoriesRes, registrations, reviewsRes] = await Promise.all([
           getHospitals().catch(() => []),
           getUsers(1, 5).catch(() => []),
-          getDoctors().catch(() => []),
+          getDoctors(normalizedRole === "admin_hospital" ? hospitalId : null, 1, 1000).catch(() => []),
           getAllPayments().catch(() => []),
-          getAllAppointments(1, 5).catch(() => []),
+          getAllAppointments(1, 1000).catch(() => []),
           getDashboardStats().catch(() => null),
-          getPaymentStats().catch(() => null)
+          getPaymentStats().catch(() => null),
+          getCategories().catch(() => []),
+          getHospitalRegistrations().catch(() => []),
+          getAllReviews().catch(() => []),
         ]);
 
         const totalHospitals = statsData?.totalHospitals || 0;
-        const totalUsers = (statsData?.totalPatients || 0) + (statsData?.totalDoctors || 0);
-        const totalCategories = 0; // Not critical
+        const totalUsers = statsData?.totalUsersCount || (statsData?.totalPatients || 0) + (statsData?.totalDoctors || 0);
+        const totalCategories = Array.isArray(categoriesRes) ? categoriesRes.length : 0;
         const totalAppointments = statsData?.totalAppointments || 0;
         const totalDoctors = statsData?.totalDoctors || 0;
         const totalRevenue = statsData?.totalRevenue || 0;
+        
+        let totalStars = 0;
+        const reviewsArray = Array.isArray(reviewsRes?.data) ? reviewsRes.data : (Array.isArray(reviewsRes) ? reviewsRes : []);
+        reviewsArray.forEach(r => {
+          totalStars += (Number(r.rating) || 0);
+        });
+        const averageStars = reviewsArray.length > 0 ? (totalStars / reviewsArray.length).toFixed(1) : "0.0";
         
         const paymentsArray = Array.isArray(payments) ? payments : [];
         const alerts = [];
@@ -109,8 +125,7 @@ export default function Home() {
               type: "positive",
               isAvatar: true,
               image: u.avatar_url || "",
-              Icon: FaUser,
-              onClick: () => navigate("/users", { state: { selectedUserId: u.id } })
+              Icon: FaUser
             });
           });
         }
@@ -127,8 +142,22 @@ export default function Home() {
               time: formatTime(a.created_at || a.createdAt),
               amount: a.status === "pending" ? "Chờ xác nhận" : "Đã duyệt",
               type: a.status === "pending" ? "negative" : "positive",
-              Icon: FaCalendarCheck,
-              onClick: () => navigate("/schedules")
+              Icon: FaCalendarCheck
+            });
+          });
+        }
+
+        const registrationRequests = [];
+        if (normalizedRole === "admin" && Array.isArray(registrations) && registrations.length > 0) {
+          const pendingRegs = registrations.filter(r => r.status === "pending");
+          pendingRegs.slice(0, 5).forEach((r, index) => {
+            registrationRequests.push({
+              title: r.hospital_name || "Đăng ký cơ sở mới",
+              time: formatTime(r.created_at || r.createdAt),
+              amount: "Chờ duyệt",
+              type: "negative",
+              Icon: FaHospital,
+              onClick: () => navigate("/hospital-registrations")
             });
           });
         }
@@ -139,12 +168,15 @@ export default function Home() {
           totalUsers,
           totalCategories,
           totalAppointments,
+          averageStars,
           paymentsData: paymentsArray,
           appointmentsData: appointmentsList,
-          hospitalsData: Array.isArray(hospitals) ? hospitals : [],
+          hospitalsData: Array.isArray(hospitals) ? hospitals : (Array.isArray(hospitals?.data) ? hospitals.data : []),
+          doctorsData: Array.isArray(doctors) ? doctors : (Array.isArray(doctors?.data) ? doctors.data : []),
           recentItems,
           alerts,
           recentAppointments,
+          registrationRequests,
           revenueChart: paymentStats?.revenueChart || [],
           loading: false,
         });
@@ -183,13 +215,19 @@ export default function Home() {
       title: "Tổng lịch hẹn",
       amount: stats.loading ? "..." : stats.totalAppointments.toString(),
       Icon: FaCalendarCheck,
-      onClick: () => navigate("/schedules"),
+      onClick: () => navigate("/appointment"),
     },
     {
       title: "Tổng doanh thu",
       amount: stats.loading ? "..." : formatCurrency(stats.totalRevenue),
       Icon: FaMoneyBillWave,
       onClick: () => navigate("/payment"),
+    },
+    {
+      title: "Trung bình sao đánh giá",
+      amount: stats.loading ? "..." : `${stats.averageStars} / 5.0`,
+      Icon: FaStar,
+      onClick: () => navigate("/review"),
     },
   ];
 
@@ -214,8 +252,8 @@ export default function Home() {
         <section className="grid grid-cols-2 gap-6 max-xl:grid-cols-1">
           {normalizedRole === "admin" ? (
             <>
+              <TransactionCard title="Yêu cầu đăng ký bệnh viện mới" items={stats.registrationRequests} />
               <TransactionCard title="Danh sách bệnh viện mới nhất" items={stats.recentItems} />
-              <TransactionCard title="Danh sách người dùng đăng ký mới nhất" items={stats.alerts} />
             </>
           ) : (
             <>
@@ -228,7 +266,12 @@ export default function Home() {
 
       <aside className="flex flex-col gap-8">
         <SavingsCard timeOptions={["Daily", "Weekly", "Monthly", "Yearly"]} chartData={stats.revenueChart} paymentsData={stats.paymentsData} />
-        <AppointmentsChart appointments={stats.totalAppointments > 0 ? stats.appointmentsData : []} hospitals={stats.hospitalsData} />
+        <AppointmentsChart 
+          appointments={stats.totalAppointments > 0 ? stats.appointmentsData : []} 
+          hospitals={stats.hospitalsData} 
+          doctors={stats.doctorsData}
+          role={normalizedRole}
+        />
       </aside>
     </div>
   );

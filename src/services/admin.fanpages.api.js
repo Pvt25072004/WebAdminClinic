@@ -45,14 +45,6 @@ export const updateFanpage = async (id, payload) => {
   return handleResponse(response, "Không thể cập nhật fanpage");
 };
 
-export const deleteFanpage = async (id) => {
-  const response = await fetch(`${FANPAGES_ENDPOINT}/${id}`, {
-    method: "DELETE",
-    headers: { ...getAuthHeaders() },
-    credentials: "include",
-  });
-  return handleResponse(response, "Không thể xóa fanpage");
-};
 
 export const uploadFanpageImage = async (file) => {
   const formData = new FormData();

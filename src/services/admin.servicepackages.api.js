@@ -38,3 +38,39 @@ export const createServicePackage = async (payload) => {
   
   return await response.json();
 };
+
+export const updateServicePackage = async (id, payload) => {
+  const response = await fetch(`${SERVICE_PACKAGES_ENDPOINT}/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Không thể cập nhật gói dịch vụ");
+  }
+  
+  return await response.json();
+};
+
+export const deleteServicePackage = async (id) => {
+  const response = await fetch(`${SERVICE_PACKAGES_ENDPOINT}/${id}`, {
+    method: "DELETE",
+    headers: {
+      ...getAuthHeaders(),
+    },
+    credentials: "include",
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Không thể xóa gói dịch vụ");
+  }
+  
+  return await response.json();
+};

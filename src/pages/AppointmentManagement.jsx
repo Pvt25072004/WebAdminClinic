@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import Button from "../components/Button";
 import { getAllAppointments, updateAppointmentStatus, getMedicalRecord, updateAppointment } from "../services/admin.appointments.api";
 import { useNotification } from "../contexts/NotificationContext";
@@ -6,18 +7,46 @@ import { CheckCircle, XCircle, Eye, Calendar, Clock, FileText, Check, X, DollarS
 import { formatDate } from "../utils/helpers";
 import Pagination from "../components/Pagination";
 
+import { useAuth } from "../contexts/AuthContext";
+import { getAdminCharts } from "../services/admin.dashboard.api";
+
 export default function AppointmentManagement() {
-  const { showSuccess, showError, confirm } = useNotification();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const location = useLocation();
+
+  const { showSuccess, showError, confirm, prompt } = useNotification();
   const [appointments, setAppointments] = useState([]);
+  const [searchQuery, setSearchQuery] = useState(location.state?.search || "");
   const [loading, setLoading] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterHospital, setFilterHospital] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [medicalRecord, setMedicalRecord] = useState(null);
   const [loadingRecord, setLoadingRecord] = useState(false);
+
+  // States for Admin Charts
+  const [adminCharts, setAdminCharts] = useState({ appointmentsByHospital: [], revenueByHospital: [] });
+
+  // States for Assignment Modal
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignDate, setAssignDate] = useState("");
+  const [assignTime, setAssignTime] = useState("");
+  const [assignDoctorId, setAssignDoctorId] = useState("");
+  const [assignAvailableSlots, setAssignAvailableSlots] = useState([]);
+  const [assignAvailableDoctors, setAssignAvailableDoctors] = useState([]);
+  const [assignLoadingSlots, setAssignLoadingSlots] = useState(false);
+  const [assignLoadingDoctors, setAssignLoadingDoctors] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.search !== undefined) {
+      setSearchQuery(location.state.search);
+    }
+  }, [location.state?.search]);
 
   useEffect(() => {
     if (selectedAppointment && selectedAppointment.status === "completed") {
@@ -42,10 +71,14 @@ export default function AppointmentManagement() {
     }
   }, [selectedAppointment?.id, selectedAppointment?.status]);
 
-  const loadAppointments = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const res = await getAllAppointments(currentPage, limit);
+      if (isAdmin) {
+        const charts = await getAdminCharts();
+        setAdminCharts(charts || { appointmentsByHospital: [], revenueByHospital: [] });
+      }
+      const res = await getAllAppointments(currentPage, limit, filterStatus, filterHospital);
       if (Array.isArray(res)) {
         setAppointments(res);
         setTotalItems(res.length);
@@ -56,21 +89,33 @@ export default function AppointmentManagement() {
         setTotalPages(res.totalPages || 1);
       }
     } catch (e) {
-      console.error("Load appointments error:", e);
-      showError("Không thể tải danh sách cuộc hẹn");
+      console.error("Load data error:", e);
+      showError("Không thể tải dữ liệu");
     } finally {
       setLoading(false);
     }
   };
 
+  const loadAppointments = loadData;
+
   useEffect(() => {
-    void loadAppointments();
-  }, [currentPage, limit]);
+    void loadData();
+  }, [currentPage, limit, isAdmin, filterStatus, filterHospital]);
+
+  const handleFilterStatusChange = (e) => {
+    setFilterStatus(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleFilterHospitalChange = (e) => {
+    setFilterHospital(e.target.value);
+    setCurrentPage(1);
+  };
 
   const handleUpdateStatus = async (id, status, requireReason = false) => {
     let reason = "";
     if (requireReason) {
-      reason = window.prompt("Vui lòng nhập lý do (hủy/từ chối):");
+      reason = await prompt("Lý do cập nhật", "Vui lòng nhập lý do (hủy/từ chối):");
       if (reason === null) return; // User cancelled prompt
       if (!reason.trim()) {
         showError("Lý do không được để trống");
@@ -116,9 +161,90 @@ export default function AppointmentManagement() {
     }
   };
 
-  const filteredAppointments = appointments.filter((apt) => {
-    if (filterStatus === "all") return true;
-    return apt.status === filterStatus;
+  // --- Assignment Logic ---
+  const handleOpenAssignModal = (apt) => {
+    setSelectedAppointment(apt);
+    setAssignDate("");
+    setAssignTime("");
+    setAssignDoctorId("");
+    setAssignAvailableSlots([]);
+    setAssignAvailableDoctors([]);
+    setShowAssignModal(true);
+  };
+
+  useEffect(() => {
+    if (showAssignModal && assignDate && selectedAppointment?.service_package_id) {
+      const fetchSlots = async () => {
+        setAssignLoadingSlots(true);
+        try {
+          const { getAvailableTimesForPackage } = await import("../services/admin.appointments.api");
+          const slots = await getAvailableTimesForPackage(selectedAppointment.service_package_id, assignDate);
+          setAssignAvailableSlots(Array.isArray(slots) ? slots : []);
+        } catch (e) {
+          console.error(e);
+          setAssignAvailableSlots([]);
+        } finally {
+          setAssignLoadingSlots(false);
+        }
+      };
+      fetchSlots();
+    }
+  }, [assignDate, showAssignModal, selectedAppointment]);
+
+  useEffect(() => {
+    if (showAssignModal && assignDate && assignTime && selectedAppointment?.service_package_id) {
+      const fetchDoctors = async () => {
+        setAssignLoadingDoctors(true);
+        try {
+          const { getAvailableDoctorsForPackage } = await import("../services/admin.appointments.api");
+          const docs = await getAvailableDoctorsForPackage(selectedAppointment.service_package_id, assignDate, assignTime);
+          setAssignAvailableDoctors(Array.isArray(docs) ? docs : []);
+        } catch (e) {
+          console.error(e);
+          setAssignAvailableDoctors([]);
+        } finally {
+          setAssignLoadingDoctors(false);
+        }
+      };
+      fetchDoctors();
+    }
+  }, [assignDate, assignTime, showAssignModal, selectedAppointment]);
+
+  const handleSubmitAssign = async () => {
+    if (!assignDate || !assignTime || !assignDoctorId) {
+      showError("Vui lòng chọn đầy đủ ngày, giờ và bác sĩ");
+      return;
+    }
+    const isConfirm = await confirm(
+      "Xác nhận gán lịch",
+      `Xác nhận gán bác sĩ cho cuộc hẹn này vào ngày ${formatDate(assignDate)} lúc ${assignTime}?`,
+      { confirmText: "Xếp lịch" }
+    );
+    if (!isConfirm) return;
+
+    try {
+      await updateAppointment(selectedAppointment.id, {
+        appointment_date: assignDate,
+        appointment_time: assignTime,
+        doctor_id: Number(assignDoctorId),
+      });
+      showSuccess("Đã gán lịch thành công!");
+      setShowAssignModal(false);
+      void loadAppointments();
+      setSelectedAppointment(null);
+    } catch (e) {
+      showError("Lỗi gán lịch: " + e.message);
+    }
+  };
+
+  const filteredAppointments = appointments.filter((app) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    const patientName = app.patient_name?.toLowerCase() || "";
+    const patientPhone = app.patient_phone?.toLowerCase() || "";
+    const doctorName = app.doctor?.user?.full_name?.toLowerCase() || "";
+    const appId = app.id?.toString() || "";
+    return patientName.includes(q) || patientPhone.includes(q) || doctorName.includes(q) || appId.includes(q);
   });
 
   const getStatusBadge = (status) => {
@@ -140,8 +266,58 @@ export default function AppointmentManagement() {
     }
   };
 
+  const maxApt = Math.max(...adminCharts.appointmentsByHospital.map(d => d.appointment_count), 1);
   return (
     <div className="xl:col-span-2">
+      {isAdmin && (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">
+                Tổng quan Lịch hẹn hệ thống
+              </h2>
+              <p className="text-sm text-slate-500">
+                Thống kê lượt khám theo từng cơ sở y tế
+              </p>
+            </div>
+            <Button variant="secondary" onClick={loadData}>Tải lại dữ liệu</Button>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Biểu đồ Lượt khám</h3>
+            {adminCharts.appointmentsByHospital.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-slate-400">
+                {loading ? "Đang tải dữ liệu..." : "Chưa có dữ liệu"}
+              </div>
+            ) : (
+              <div className="flex items-end justify-start h-[300px] gap-6 pt-10 overflow-x-auto pb-2 scrollbar-thin px-4">
+                {adminCharts.appointmentsByHospital.map((data, idx) => {
+                  const hPct = (data.appointment_count / maxApt) * 100;
+                  return (
+                    <div key={idx} className="flex flex-col items-center flex-1 group min-w-[100px] max-w-[120px] relative h-full justify-end">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-xs py-2 px-3 rounded-lg absolute -top-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none whitespace-nowrap text-center shadow-lg">
+                        <div className="font-semibold mb-1">{data.hospital_name}</div>
+                        <div className="text-emerald-300">{data.appointment_count} lượt khám</div>
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-800 rotate-45"></div>
+                      </div>
+                      
+                      <div className="w-full flex-1 flex flex-col justify-end items-center relative">
+                        <div 
+                          className="w-full bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t-sm transition-all duration-500 group-hover:opacity-90 shadow-sm"
+                          style={{ height: `${Math.max(hPct, 2)}%` }}
+                        ></div>
+                      </div>
+                      <div className="mt-3 text-xs font-medium text-slate-600 text-center line-clamp-2 h-8 w-full leading-tight">
+                        {data.hospital_name}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">
@@ -150,11 +326,38 @@ export default function AppointmentManagement() {
           <p className="text-sm text-slate-500">
             Theo dõi và quản lý toàn bộ các cuộc hẹn trên hệ thống
           </p>
+          <p className="text-sm font-medium text-emerald-600 mt-1">
+            Tổng số: {totalItems} lịch hẹn
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+          <input
+            type="text"
+            placeholder="Tìm mã, tên bệnh nhân, SDT..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="border border-slate-200 rounded-lg text-sm px-3 py-2 outline-none focus:border-emerald-500 w-full sm:w-64"
+          />
+          {isAdmin && (
+            <select
+              value={filterHospital}
+              onChange={handleFilterHospitalChange}
+              className="border-slate-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+            >
+              <option value="all">Tất cả Bệnh viện</option>
+              {Array.from(new Set(appointments.map(a => a.hospital_id))).map(hId => {
+                const appt = appointments.find(a => a.hospital_id === hId);
+                return (
+                  <option key={hId} value={hId}>
+                    {appt?.hospital?.name || appt?.hospital_name_snapshot || `Hospital ${hId}`}
+                  </option>
+                );
+              })}
+            </select>
+          )}
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            onChange={handleFilterStatusChange}
             className="border-slate-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
             <option value="all">Tất cả trạng thái</option>
@@ -175,6 +378,7 @@ export default function AppointmentManagement() {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 border-b">
+              <th className="py-3 px-2 w-12">STT</th>
               <th className="py-3 px-2">ID</th>
               <th className="py-3 px-2">Bệnh nhân</th>
               <th className="py-3 px-2">Bác sĩ / Gói khám</th>
@@ -189,21 +393,24 @@ export default function AppointmentManagement() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-500">
+                <td colSpan={10} className="py-8 text-center text-slate-500">
                   Đang tải dữ liệu cuộc hẹn...
                 </td>
               </tr>
             )}
             {!loading && filteredAppointments.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-500">
+                <td colSpan={10} className="py-8 text-center text-slate-500">
                   Không tìm thấy cuộc hẹn nào.
                 </td>
               </tr>
             )}
             {!loading &&
-              filteredAppointments.map((apt) => (
+              filteredAppointments.map((apt, index) => (
                 <tr key={apt.id} className="border-b last:border-0 hover:bg-slate-50">
+                  <td className="py-3 px-2 text-slate-500 font-medium">
+                    {(currentPage - 1) * limit + index + 1}
+                  </td>
                   <td className="py-3 px-2 font-mono text-xs text-slate-500">
                     #{apt.id}
                   </td>
@@ -252,6 +459,11 @@ export default function AppointmentManagement() {
                   </td>
                   <td className="py-3 px-2 text-right">
                     <div className="flex gap-2 justify-end">
+                      {apt.service_package_id && !apt.appointment_date && (apt.status === "pending" || apt.status === "confirmed") && (
+                        <Button size="sm" variant="primary" onClick={() => handleOpenAssignModal(apt)}>
+                          Xếp lịch
+                        </Button>
+                      )}
                       <Button size="sm" variant="outline" onClick={() => setSelectedAppointment(apt)}>
                         <Eye className="w-4 h-4 mr-1 text-blue-500" /> Chi tiết
                       </Button>
@@ -419,6 +631,93 @@ export default function AppointmentManagement() {
                   <DollarSign className="w-4 h-4" /> Xác nhận đã hoàn tiền
                 </Button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAssignModal && selectedAppointment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-slate-900 mb-4 border-b pb-2">Xếp lịch Gói khám</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Gói khám: <strong>{selectedAppointment.service_package?.name}</strong> <br />
+              Bệnh nhân: <strong>{selectedAppointment.user?.full_name}</strong>
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Ngày khám</label>
+                <input 
+                  type="date" 
+                  value={assignDate} 
+                  onChange={(e) => setAssignDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {assignDate && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Giờ khám</label>
+                  {assignLoadingSlots ? (
+                    <p className="text-sm text-slate-500">Đang tải khung giờ...</p>
+                  ) : assignAvailableSlots.length > 0 ? (
+                    <div className="grid grid-cols-4 gap-2">
+                      {assignAvailableSlots.map(time => (
+                        <button
+                          key={time}
+                          onClick={() => setAssignTime(time)}
+                          className={`py-2 text-sm rounded border ${assignTime === time ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'}`}
+                        >
+                          {time}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-red-500">Không có khung giờ trống.</p>
+                  )}
+                </div>
+              )}
+
+              {assignDate && assignTime && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Bác sĩ phụ trách</label>
+                  {assignLoadingDoctors ? (
+                    <p className="text-sm text-slate-500">Đang tải bác sĩ...</p>
+                  ) : assignAvailableDoctors.length > 0 ? (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {assignAvailableDoctors.map(doc => (
+                        <label key={doc.id} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${assignDoctorId === doc.id ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                          <input 
+                            type="radio" 
+                            name="assignDoc" 
+                            value={doc.id} 
+                            checked={assignDoctorId === doc.id} 
+                            onChange={() => setAssignDoctorId(doc.id)} 
+                            className="text-blue-600 focus:ring-blue-500"
+                          />
+                          <div>
+                            <p className="font-medium text-slate-900">{doc.name}</p>
+                            <p className="text-xs text-slate-500">{doc.specialty}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-red-500">Không có bác sĩ trống vào thời gian này.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-6 mt-6 border-t">
+              <Button variant="ghost" onClick={() => setShowAssignModal(false)}>
+                Hủy
+              </Button>
+              <Button variant="primary" onClick={handleSubmitAssign} disabled={!assignDate || !assignTime || !assignDoctorId}>
+                Xác nhận
+              </Button>
             </div>
           </div>
         </div>

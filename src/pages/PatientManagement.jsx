@@ -9,8 +9,12 @@ import {
   toggleUserActive,
   deleteUserAdmin,
 } from "../services/admin.users.api";
+import { useNotification } from "../contexts/NotificationContext";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function PatientManagement() {
+  const { user } = useAuth();
+  const { showSuccess, showError, confirm, prompt } = useNotification();
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -36,6 +40,45 @@ export default function PatientManagement() {
   useEffect(() => {
     void loadUsers();
   }, [currentPage, limit]);
+
+  const handleToggleUser = async (patient) => {
+    if (patient.is_active !== false) {
+      const reason = await prompt("Tạm khóa tài khoản", "Nhập lý do khóa tài khoản bệnh nhân (bắt buộc):");
+      if (!reason) return;
+    } else {
+      const isConfirm = await confirm(
+        "Xác nhận kích hoạt",
+        "Bạn có chắc muốn kích hoạt lại tài khoản này?",
+        { confirmText: "Đồng ý" }
+      );
+      if (!isConfirm) return;
+    }
+    
+    try {
+      await toggleUserActive(patient.id, patient.is_active);
+      showSuccess(`Đã ${patient.is_active !== false ? "tạm khóa" : "kích hoạt"} tài khoản thành công!`);
+      loadUsers();
+    } catch (e) {
+      showError(e.message || "Không thể cập nhật trạng thái");
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    const reason = await prompt(
+      "Xóa bệnh nhân",
+      "Vui lòng nhập lý do xóa để gửi qua Email cho bệnh nhân:"
+    );
+    if (!reason) return;
+
+    try {
+      await deleteUserAdmin(id);
+      showSuccess("Đã xóa bệnh nhân thành công.");
+      loadUsers();
+    } catch (e) {
+      showError(e.message || "Bạn không có quyền xóa bệnh nhân, hoặc lỗi hệ thống.");
+    }
+  };
+
   const visibleUsers = users.filter((u) => u.role !== "admin");
   return (
     <div className="xl:col-span-2">
@@ -47,6 +90,9 @@ export default function PatientManagement() {
           <p className="text-sm text-slate-500">
             Danh sách bệnh nhân đã đăng ký
           </p>
+          <p className="text-sm font-medium text-emerald-600 mt-1">
+            Tổng số: {totalItems} bệnh nhân
+          </p>
         </div>
         <Button size="sm" variant="outline">
           Xuất danh sách
@@ -56,6 +102,7 @@ export default function PatientManagement() {
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-medium">
             <tr className="text-left">
+              <th className="py-3 px-4 w-16">STT</th>
               <th className="py-3 px-4">Tên</th>
               <th className="py-3 px-4">Email</th>
               <th className="py-3 px-4">Điện thoại</th>
@@ -67,7 +114,7 @@ export default function PatientManagement() {
             {loadingUsers && <TableSkeleton columns={5} rows={5} />}
             {!loadingUsers && visibleUsers.length === 0 && (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={6}>
                   <EmptyState 
                     icon={Inbox} 
                     title="Chưa có người dùng nào" 
@@ -77,8 +124,11 @@ export default function PatientManagement() {
               </tr>
             )}
             {!loadingUsers &&
-              visibleUsers.map((user) => (
+              visibleUsers.map((user, index) => (
                 <tr key={user.id} className="border-b border-slate-100 hover:bg-emerald-50/50 transition-colors last:border-0">
+                  <td className="py-3 px-4 text-slate-500 font-medium">
+                    {(currentPage - 1) * limit + index + 1}
+                  </td>
                   <td className="py-3 px-4 font-medium text-slate-900">
                     {user.full_name}
                   </td>

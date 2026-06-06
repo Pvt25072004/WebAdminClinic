@@ -22,6 +22,7 @@ const SchedulesManagement = lazy(() => import("./pages/SchedulesManagement"));
 const NotificationManagement = lazy(() => import("./pages/NotificationManagement"));
 const NewsManagement = lazy(() => import("./pages/NewsManagement"));
 const SocialManagement = lazy(() => import("./pages/SocialManagement"));
+const FanpagePostManagement = lazy(() => import("./pages/FanpagePostManagement"));
 const ReviewManagement = lazy(() => import("./pages/ReviewManagement"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const DoctorRequestsManagement = lazy(() => import("./pages/DoctorRequestsManagement"));
@@ -161,7 +162,8 @@ const AppRouter = () => {
         <Route path="/appointment" element={<AppointmentManagement />} />
         <Route path="/payment" element={<PaymentManagement />} />
         <Route path="/news" element={<RequireSuperAdmin><NewsManagement /></RequireSuperAdmin>} />
-        <Route path="/social" element={<RequireSuperAdmin><SocialManagement /></RequireSuperAdmin>} />
+        <Route path="/social" element={<SocialManagement />} />
+        <Route path="/fanpage-posts" element={<FanpagePostManagement />} />
         <Route path="/review" element={<ReviewManagement />} />
         <Route path="/users" element={<RequireSuperAdmin><UserManagement /></RequireSuperAdmin>} />
         <Route path="/doctor-requests" element={<DoctorRequestsManagement />} />

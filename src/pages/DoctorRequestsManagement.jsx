@@ -7,7 +7,7 @@ import { CheckCircle, XCircle, Eye, FileText, Download } from "lucide-react";
 
 export default function DoctorRequestsManagement() {
   const { user } = useAuth();
-  const { showSuccess, showError, confirm } = useNotification();
+  const { showSuccess, showError, confirm, prompt } = useNotification();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -48,7 +48,7 @@ export default function DoctorRequestsManagement() {
     );
     if (!isConfirm) return;
     
-    const reason = window.prompt("Vui lòng nhập lý do từ chối để gửi cho bác sĩ (bắt buộc):");
+    const reason = await prompt("Lý do từ chối", "Vui lòng nhập lý do từ chối để gửi cho bác sĩ (bắt buộc):");
     if (reason === null) return;
     if (!reason.trim()) {
       showError("Lý do từ chối không được để trống!");
@@ -75,6 +75,9 @@ export default function DoctorRequestsManagement() {
           <p className="text-sm text-slate-500">
             Quản lý các bác sĩ xin phép làm việc hoặc xin nghỉ tại cơ sở y tế của bạn
           </p>
+          <p className="text-sm font-medium text-emerald-600 mt-1">
+            Tổng số: {requests.length} yêu cầu
+          </p>
         </div>
       </div>
 
@@ -82,6 +85,7 @@ export default function DoctorRequestsManagement() {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 border-b">
+              <th className="py-3 px-2 w-12">STT</th>
               <th className="py-3 px-2">Ngày gửi</th>
               <th className="py-3 px-2">Bác sĩ</th>
               <th className="py-3 px-2">Loại yêu cầu</th>
@@ -94,21 +98,24 @@ export default function DoctorRequestsManagement() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-500">
+                <td colSpan={8} className="py-8 text-center text-slate-500">
                   Đang tải dữ liệu...
                 </td>
               </tr>
             )}
             {!loading && requests.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-500">
+                <td colSpan={8} className="py-8 text-center text-slate-500">
                   Không có yêu cầu nào.
                 </td>
               </tr>
             )}
             {!loading &&
-              requests.map((req) => (
+              requests.map((req, index) => (
                 <tr key={req.id} className="border-b last:border-0 hover:bg-slate-50">
+                  <td className="py-3 px-2 text-slate-500 font-medium">
+                    {index + 1}
+                  </td>
                   <td className="py-3 px-2 text-slate-500">
                     {new Date(req.created_at).toLocaleDateString('vi-VN')}
                   </td>

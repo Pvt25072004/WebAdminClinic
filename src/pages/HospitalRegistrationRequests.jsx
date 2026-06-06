@@ -328,8 +328,11 @@ export default function HospitalRegistrationRequests() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Đơn Đăng Ký Đối Tác (Bệnh viện)</h1>
-          <p className="text-gray-500">Quản lý và xét duyệt các cơ sở y tế muốn tham gia hệ thống.</p>
+          <h1 className="text-2xl font-bold text-gray-800">Đơn Đăng Ký Đối Tác</h1>
+          <p className="text-gray-500 text-sm mt-1">Quản lý và xét duyệt các cơ sở y tế muốn tham gia hệ thống.</p>
+          <p className="text-sm font-medium text-emerald-600 mt-1">
+            Tổng số: {requests.length} đơn đăng ký
+          </p>
         </div>
       </div>
 
@@ -342,6 +345,7 @@ export default function HospitalRegistrationRequests() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b">
+                <th className="p-4 font-semibold text-gray-600 w-16">STT</th>
                 <th className="p-4 font-semibold text-gray-600">ID</th>
                 <th className="p-4 font-semibold text-gray-600">Ngày gửi</th>
                 <th className="p-4 font-semibold text-gray-600">Cơ sở y tế</th>
@@ -351,8 +355,9 @@ export default function HospitalRegistrationRequests() {
               </tr>
             </thead>
             <tbody>
-              {requests.map((req) => (
+              {requests.map((req, index) => (
                 <tr key={req.id} className="border-b hover:bg-gray-50">
+                  <td className="p-4 text-slate-500 font-medium">{index + 1}</td>
                   <td className="p-4">#{req.id}</td>
                   <td className="p-4">{new Date(req.created_at).toLocaleDateString("vi-VN")}</td>
                   <td className="p-4 font-medium">{req.hospital_name || "Chưa điền"}</td>

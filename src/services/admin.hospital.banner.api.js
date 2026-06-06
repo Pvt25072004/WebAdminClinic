@@ -15,15 +15,6 @@ export const getHospitalBanners = async () => {
   return handleResponse(response, "Không thể tải danh sách banner bệnh viện");
 };
 
-export const getActiveHospitalBanners = async () => {
-  const response = await fetch(`${HOSPITAL_BANNERS_ENDPOINT}/active`, {
-    headers: {
-      ...getAuthHeaders(),
-    },
-  });
-
-  return handleResponse(response, "Không thể tải banner đang hoạt động");
-};
 
 export const uploadHospitalBannerImage = async (file) => {
   const formData = new FormData();

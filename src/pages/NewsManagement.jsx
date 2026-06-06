@@ -12,9 +12,12 @@ import {
   syncGoogleNews,
 } from "../services/admin.news.api";
 import { useNotification } from "../contexts/NotificationContext";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function NewsManagement() {
-  const { showSuccess, showError, confirm } = useNotification();
+  const { user } = useAuth();
+  const isHospitalAdmin = user?.role === "admin_hospital" || user?.user_role === "admin_hospital";
+  const { showSuccess, showError, confirm, prompt } = useNotification();
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(false);
   
@@ -39,7 +42,8 @@ export default function NewsManagement() {
     try {
       setLoading(true);
       const data = await getNews();
-      setNewsList(Array.isArray(data) ? data : []);
+      const sortedData = (Array.isArray(data) ? data : []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      setNewsList(sortedData);
     } catch (e) {
       console.error("Load news error:", e);
     } finally {
@@ -78,12 +82,23 @@ export default function NewsManagement() {
   };
 
   const handleDelete = async (id) => {
-    const isConfirm = await confirm(
-      "Xác nhận xóa",
-      "Bạn có chắc muốn xóa bài viết này không?",
-      { variant: "danger", confirmText: "Xóa" }
-    );
-    if (!isConfirm) return;
+    if (isHospitalAdmin) {
+      const reason = await prompt(
+        "Xác nhận xóa",
+        "Nhập lý do xóa bài viết (bắt buộc):"
+      );
+      if (!reason) {
+        if (reason === "") showError("Vui lòng nhập lý do!");
+        return;
+      }
+    } else {
+      const isConfirm = await confirm(
+        "Xác nhận xóa",
+        "Bạn có chắc muốn xóa bài viết này không?",
+        { variant: "danger", confirmText: "Xóa" }
+      );
+      if (!isConfirm) return;
+    }
 
     try {
       await deleteNews(id);
@@ -95,6 +110,24 @@ export default function NewsManagement() {
   };
 
   const handleTogglePublish = async (item) => {
+    if (isHospitalAdmin) {
+      const reason = await prompt(
+        item.is_published ? "Ẩn bài viết" : "Hiển thị bài viết",
+        `Nhập lý do ${item.is_published ? "ẩn" : "hiển thị"} bài viết (bắt buộc):`
+      );
+      if (!reason) {
+        if (reason === "") showError("Vui lòng nhập lý do!");
+        return;
+      }
+    } else {
+      const isConfirm = await confirm(
+        "Xác nhận trạng thái",
+        `Bạn có chắc muốn ${item.is_published ? "ẩn" : "hiển thị"} bài viết này?`,
+        { confirmText: "Đồng ý" }
+      );
+      if (!isConfirm) return;
+    }
+
     try {
       await updateNews(item.id, { is_published: !item.is_published });
       showSuccess(`Đã ${item.is_published ? "ẩn" : "hiển thị"} bài viết`);
@@ -111,6 +144,26 @@ export default function NewsManagement() {
     }
 
     try {
+      if (editingId) {
+        if (isHospitalAdmin) {
+          const reason = await prompt(
+            "Xác nhận cập nhật",
+            "Nhập lý do cập nhật bài viết (bắt buộc):"
+          );
+          if (!reason) {
+            if (reason === "") showError("Vui lòng nhập lý do!");
+            return;
+          }
+        } else {
+          const isConfirm = await confirm(
+            "Xác nhận cập nhật",
+            "Bạn có chắc muốn lưu thay đổi bài viết này?",
+            { confirmText: "Lưu thay đổi" }
+          );
+          if (!isConfirm) return;
+        }
+      }
+
       setSubmitting(true);
       if (editingId) {
         await updateNews(editingId, formData);
@@ -182,24 +235,18 @@ export default function NewsManagement() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Quản lý Tin Tức</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Soạn thảo, quản lý bài viết và lấy tin tự động từ Google News
+            Soạn thảo và quản lý bài viết
+          </p>
+          <p className="text-sm font-medium text-emerald-600 mt-1">
+            Tổng số: {newsList.length} bài viết
           </p>
         </div>
         <div className="flex gap-3">
           <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handleSyncGoogle}
-            disabled={syncing}
-          >
-            <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Đang đồng bộ..." : "Đồng bộ Google"}
-          </Button>
-          <Button
             className="flex items-center gap-2"
             onClick={handleCreateNew}
           >
-            <Plus className="w-4 h-4" /> Viết bài mới
+            <Plus className="w-4 h-4" /> Thêm Bài Viết
           </Button>
         </div>
       </div>
@@ -349,7 +396,7 @@ export default function NewsManagement() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 border-b border-slate-200">
                 <tr>
-                  <th className="py-4 px-6 font-semibold w-16">ID</th>
+                  <th className="py-4 px-6 font-semibold w-16">STT</th>
                   <th className="py-4 px-6 font-semibold w-24">Ảnh</th>
                   <th className="py-4 px-6 font-semibold">Tiêu đề</th>
                   <th className="py-4 px-6 font-semibold">Tác giả/Nguồn</th>
@@ -372,10 +419,10 @@ export default function NewsManagement() {
                     </td>
                   </tr>
                 ) : (
-                  newsList.map((item) => (
+                  newsList.map((item, index) => (
                     <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-4 px-6 font-medium text-slate-900">
-                        #{item.id}
+                        {index + 1}
                       </td>
                       <td className="py-4 px-6">
                         <div className="w-16 h-12 rounded bg-slate-100 overflow-hidden border border-slate-200">

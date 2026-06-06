@@ -13,15 +13,6 @@ export const getHospitalRegistrations = async () => {
   return handleResponse(response, "Lỗi tải danh sách đăng ký");
 };
 
-export const getHospitalRegistrationDetails = async (id) => {
-  const response = await fetch(`${BASE_URL}/${id}`, {
-    headers: {
-      ...getAuthHeaders(),
-    },
-    credentials: "include",
-  });
-  return handleResponse(response, "Lỗi tải chi tiết");
-};
 
 export const updateHospitalRegistrationStatus = async (id, payload) => {
   const response = await fetch(`${BASE_URL}/${id}/status`, {

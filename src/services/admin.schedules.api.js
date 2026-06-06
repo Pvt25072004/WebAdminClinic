@@ -28,16 +28,6 @@ export const createSchedule = async (payload) => {
   return await response.json();
 };
 
-export const approveSchedule = async (id) => {
-  const response = await fetch(`${SCHEDULES_ENDPOINT}/${id}/approve`, {
-    method: "PATCH",
-    headers: {
-      ...getAuthHeaders(),
-    },
-    credentials: "include",
-  });
-  return handleResponse(response, "Không thể duyệt lịch biểu");
-};
 
 export const updateScheduleStatus = async (id, isAvailable) => {
   const response = await fetch(`${SCHEDULES_ENDPOINT}/${id}/status`, {

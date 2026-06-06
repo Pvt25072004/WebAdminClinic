@@ -25,15 +25,6 @@ export const register = async (userData) => {
   return handleResponse(response, "Đăng ký thất bại");
 };
 
-export const sendRegistrationOtp = async (email) => {
-  const response = await fetch(`${API_BASE_URL}/auth/send-registration-otp`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-    credentials: "include",
-  });
-  return handleResponse(response, "Gửi mã OTP thất bại");
-};
 
 export const socialLogin = async (payload) => {
   const response = await fetch(`${API_BASE_URL}/auth/social-login`, {

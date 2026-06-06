@@ -29,6 +29,7 @@ import {
   getHospitals,
   updateHospital,
   deleteHospital,
+  getCities,
 } from "../services/admin.hospitals.api";
 import {
   getCategories,
@@ -38,9 +39,12 @@ import {
 } from "../services/admin.categories.api";
 import { useNotification } from "../contexts/NotificationContext";
 import { uploadUserImage } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function HospitalManagement() {
-  const { showSuccess, showError, confirm } = useNotification();
+  const { user } = useAuth();
+  const isHospitalAdmin = user?.role === "admin_hospital" || user?.user_role === "admin_hospital";
+  const { showSuccess, showError, confirm, prompt } = useNotification();
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -90,13 +94,34 @@ export default function HospitalManagement() {
   };
 
   // Filters
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(location.state?.search || "");
   const [filterCity, setFilterCity] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const cities = Array.from(
-    new Set(hospitals.map((h) => h.city?.name || h.city).filter(Boolean)),
-  );
+  useEffect(() => {
+    if (location.state?.search) {
+      setSearchTerm(location.state.search);
+    }
+  }, [location.state?.search]);
+
+  const [cities, setCities] = useState([]);
+
+  const loadHospitals = async () => {
+    try {
+      setLoadingHospitals(true);
+      const [hospitalsData, citiesData] = await Promise.all([
+        getHospitals(),
+        getCities()
+      ]);
+      const sortedHospitals = (Array.isArray(hospitalsData) ? hospitalsData : []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      setHospitals(sortedHospitals);
+      setCities(Array.isArray(citiesData) ? citiesData : []);
+    } catch (e) {
+      console.error("Load hospitals error:", e);
+    } finally {
+      setLoadingHospitals(false);
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -137,12 +162,23 @@ export default function HospitalManagement() {
   };
 
   const handleDeleteCategory = async (id) => {
-    const isConfirm = await confirm(
-      "Xác nhận xóa",
-      "Bạn có chắc muốn xóa chuyên khoa này?",
-      { variant: "danger", confirmText: "Xóa" },
-    );
-    if (!isConfirm) return;
+    if (isHospitalAdmin) {
+      const reason = await prompt(
+        "Xác nhận xóa chuyên khoa",
+        "Nhập lý do xóa chuyên khoa (bắt buộc):"
+      );
+      if (!reason) {
+        if (reason === "") showError("Vui lòng nhập lý do!");
+        return;
+      }
+    } else {
+      const isConfirm = await confirm(
+        "Xác nhận xóa",
+        "Bạn có chắc muốn xóa chuyên khoa này?",
+        { variant: "danger", confirmText: "Xóa" },
+      );
+      if (!isConfirm) return;
+    }
 
     try {
       await deleteCategory(id);
@@ -152,17 +188,7 @@ export default function HospitalManagement() {
       showError(e.message || "Không thể xóa chuyên khoa");
     }
   };
-  const loadHospitals = async () => {
-    try {
-      setLoadingHospitals(true);
-      const data = await getHospitals();
-      setHospitals(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error("Load hospitals error:", e);
-    } finally {
-      setLoadingHospitals(false);
-    }
-  };
+
   const handleEditHospital = (hospital) => {
     setEditingHospital(hospital);
     setHospitalForm({
@@ -183,6 +209,24 @@ export default function HospitalManagement() {
   };
 
   const handleToggleActive = async (hospital) => {
+    if (isHospitalAdmin) {
+      const reason = await prompt(
+        hospital.is_active ? "Khóa cơ sở y tế" : "Mở khóa cơ sở y tế",
+        `Nhập lý do ${hospital.is_active ? "khóa" : "mở khóa"} (bắt buộc):`
+      );
+      if (!reason) {
+        if (reason === "") showError("Vui lòng nhập lý do!");
+        return;
+      }
+    } else {
+      const isConfirm = await confirm(
+        "Xác nhận thay đổi",
+        `Bạn có chắc muốn ${hospital.is_active ? "khóa" : "mở khóa"} cơ sở y tế này?`,
+        { confirmText: "Đồng ý" }
+      );
+      if (!isConfirm) return;
+    }
+
     try {
       await updateHospital(hospital.id, { is_active: !hospital.is_active });
       showSuccess(`Đã ${!hospital.is_active ? "mở khóa" : "khóa"} bệnh viện`);
@@ -193,6 +237,26 @@ export default function HospitalManagement() {
   };
   const handleSubmitHospital = async (e) => {
     e.preventDefault();
+    if (editingHospital) {
+      if (isHospitalAdmin) {
+        const reason = await prompt(
+          "Xác nhận cập nhật",
+          "Nhập lý do cập nhật thông tin bệnh viện (bắt buộc):"
+        );
+        if (!reason) {
+          if (reason === "") showError("Vui lòng nhập lý do!");
+          return;
+        }
+      } else {
+        const isConfirm = await confirm(
+          "Xác nhận cập nhật",
+          "Bạn có chắc muốn lưu các thay đổi cho bệnh viện này?",
+          { confirmText: "Lưu thay đổi" }
+        );
+        if (!isConfirm) return;
+      }
+    }
+
     try {
       const payload = {
         ...hospitalForm,
@@ -214,17 +278,25 @@ export default function HospitalManagement() {
     }
   };
   const handleDeleteHospital = async (id) => {
-    const isConfirm = await confirm(
-      "Xác nhận xóa",
-      "Bạn có chắc muốn xóa bệnh viện này?",
-      { variant: "danger", confirmText: "Tiếp tục" },
-    );
-    if (!isConfirm) return;
+    if (isHospitalAdmin) {
+      const reason = await prompt(
+        "Xác nhận xóa bệnh viện",
+        "Nhập lý do xóa bệnh viện (bắt buộc):"
+      );
+      if (!reason) {
+        if (reason === "") showError("Vui lòng nhập lý do!");
+        return;
+      }
+    } else {
+      const isConfirm = await confirm(
+        "Xác nhận xóa",
+        "Bạn có chắc muốn xóa bệnh viện này?",
+        { variant: "danger", confirmText: "Tiếp tục" },
+      );
+      if (!isConfirm) return;
+    }
 
-    const reason = window.prompt(
-      "Vui lòng nhập lý do xóa để gửi qua Email cho bệnh viện:",
-    );
-    if (reason === null) return; // User cancelled prompt
+    // Removed duplicate prompt
 
     try {
       await deleteHospital(id);
@@ -267,6 +339,8 @@ export default function HospitalManagement() {
     }
   }, [location.state?.selectedHospitalId, hospitals]);
 
+  const [filterCategory, setFilterCategory] = useState("");
+
   const filteredHospitals = hospitals.filter((h) => {
     const matchSearch = h.name.toLowerCase().includes(searchTerm.toLowerCase());
     const hCityName = h.city?.name || h.city;
@@ -274,7 +348,11 @@ export default function HospitalManagement() {
     let matchStatus = true;
     if (filterStatus === "active") matchStatus = h.is_active !== false;
     if (filterStatus === "inactive") matchStatus = h.is_active === false;
-    return matchSearch && matchCity && matchStatus;
+    let matchCategory = true;
+    if (filterCategory) {
+      matchCategory = h.categories && h.categories.some(c => c.id.toString() === filterCategory.toString());
+    }
+    return matchSearch && matchCity && matchStatus && matchCategory;
   });
   return (
     <>
@@ -282,7 +360,7 @@ export default function HospitalManagement() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-semibold text-slate-900">
-              Quản lý bệnh viện
+              Quản lý bệnh viện (Tổng: {filteredHospitals.length})
             </h2>
             <p className="text-sm text-slate-500">
               Thêm/Sửa/Xóa thông tin cơ sở y tế
@@ -575,6 +653,23 @@ export default function HospitalManagement() {
           </div>
           <div className="w-48">
             <label className="block text-xs font-medium text-slate-500 mb-1">
+              Chuyên khoa
+            </label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white"
+            >
+              <option value="">Tất cả chuyên khoa</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="w-48">
+            <label className="block text-xs font-medium text-slate-500 mb-1">
               Khu vực
             </label>
             <select
@@ -584,8 +679,8 @@ export default function HospitalManagement() {
             >
               <option value="">Tất cả khu vực</option>
               {cities.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+                <option key={c.id} value={c.name}>
+                  {c.name}
                 </option>
               ))}
             </select>
@@ -617,7 +712,7 @@ export default function HospitalManagement() {
               />
             </div>
           )}
-          {filteredHospitals.map((hospital) => (
+          {filteredHospitals.map((hospital, index) => (
             <div
               key={hospital.id}
               className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
@@ -636,11 +731,12 @@ export default function HospitalManagement() {
                         <Building className="w-4 h-4 text-slate-400" />
                       </div>
                     )}
+                    <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-xs">#{filteredHospitals.length - index}</span>
                     {hospital.name}
                   </h3>
                   {hospital.city && (
                     <p className="text-sm text-emerald-600 font-medium">
-                      {hospital.city}
+                      {typeof hospital.city === 'object' ? (hospital.city?.name || "Chưa cập nhật") : hospital.city}
                     </p>
                   )}
                   <p className="text-sm text-slate-500">{hospital.address}</p>
@@ -784,7 +880,7 @@ export default function HospitalManagement() {
                       <div className="flex justify-between">
                         <span className="text-slate-500 text-sm">Khu vực:</span>
                         <span className="font-medium text-slate-900">
-                          {viewingHospital.city || "Chưa cập nhật"}
+                          {typeof viewingHospital.city === 'object' ? (viewingHospital.city?.name || "Chưa cập nhật") : (viewingHospital.city || "Chưa cập nhật")}
                         </span>
                       </div>
                     </div>

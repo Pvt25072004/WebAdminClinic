@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 
-export default function AppointmentsChart({ appointments = [], hospitals = [] }) {
+export default function AppointmentsChart({ appointments = [], hospitals = [], doctors = [], role = "admin" }) {
   const [timeRange, setTimeRange] = useState('month');
 
   // Lọc dữ liệu theo khoảng thời gian
@@ -28,29 +28,33 @@ export default function AppointmentsChart({ appointments = [], hospitals = [] })
     });
   }, [appointments, timeRange]);
 
-  // Đếm số lịch hẹn theo từng bệnh viện
+  const isHospitalAdmin = role === 'admin_hospital';
+
+  // Đếm số lịch hẹn theo từng bệnh viện hoặc bác sĩ
   const chartData = useMemo(() => {
-    if (!hospitals || hospitals.length === 0) return [];
-    
     const counts = {};
-    hospitals.forEach(h => counts[h.id] = 0);
+    const entities = isHospitalAdmin ? doctors : hospitals;
+    
+    if (!entities || entities.length === 0) return [];
+    
+    entities.forEach(e => counts[e.id] = 0);
 
     filteredAppointments.forEach(app => {
-      const hId = app.hospital_id || app.hospitalId;
-      if (hId && counts[hId] !== undefined) {
-        counts[hId]++;
+      const eId = isHospitalAdmin ? (app.doctor_id || app.doctorId || app.doctor?.id) : (app.hospital_id || app.hospitalId || app.hospital?.id);
+      if (eId && counts[eId] !== undefined) {
+        counts[eId]++;
       }
     });
 
-    // Trả về danh sách bệnh viện kèm số lượt khám (sắp xếp giảm dần)
-    return hospitals
-      .map(h => ({
-        label: h.name?.substring(0, 15) + (h.name?.length > 15 ? '...' : ''), // Cắt ngắn tên BV
-        fullName: h.name,
-        count: counts[h.id] || 0
+    return entities
+      .map(e => ({
+        label: e.name || e.full_name || e.user?.full_name || 'Không xác định',
+        fullName: e.name || e.full_name || e.user?.full_name || 'Không xác định',
+        count: counts[e.id] || 0
       }))
+      .map(e => ({ ...e, label: e.label.substring(0, 15) + (e.label.length > 15 ? '...' : '') }))
       .sort((a, b) => b.count - a.count);
-  }, [filteredAppointments, hospitals]);
+  }, [filteredAppointments, hospitals, doctors, isHospitalAdmin]);
 
   const maxCount = Math.max(...chartData.map(d => d.count), 1); // Tránh chia cho 0
 
@@ -58,8 +62,8 @@ export default function AppointmentsChart({ appointments = [], hospitals = [] })
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-lg font-bold text-slate-900">Lượt khám theo bệnh viện</h3>
-          <p className="text-sm text-slate-500">Tổng số lượng khám khi patient đặt</p>
+          <h3 className="text-lg font-bold text-slate-900">Lượt khám theo {isHospitalAdmin ? 'Bác sĩ' : 'Bệnh viện'}</h3>
+          <p className="text-sm text-slate-500">Tổng số lượng khám {isHospitalAdmin ? 'đặt với bác sĩ' : 'khi patient đặt'}</p>
         </div>
         
         <select 
@@ -85,11 +89,11 @@ export default function AppointmentsChart({ appointments = [], hospitals = [] })
             return (
               <div key={index} className="flex flex-col items-center flex-1 group min-w-[70px] relative h-full justify-end">
                 {/* Tooltip on hover */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-xs py-2 px-3 rounded-lg absolute -top-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none whitespace-nowrap text-center shadow-lg">
-                  <div className="font-semibold mb-1">{data.fullName}</div>
-                  <div className="text-emerald-300">{data.count} lượt khám</div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-md border border-slate-100 text-slate-800 text-sm py-3 px-4 rounded-2xl absolute -top-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none whitespace-nowrap text-center shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                  <div className="font-semibold text-slate-700 mb-1">{data.fullName}</div>
+                  <div className="text-emerald-600 font-bold">{data.count} lượt khám</div>
                   {/* Mũi tên */}
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-800 rotate-45"></div>
+                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b border-r border-slate-100 rotate-45"></div>
                 </div>
                 
                 {/* Bar Container - flex-1 để chiếm hết chiều cao còn lại sau khi chừa chỗ cho text */}

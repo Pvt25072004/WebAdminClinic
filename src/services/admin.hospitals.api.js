@@ -18,18 +18,16 @@ export const getHospitals = async () => {
   return handleResponse(response, "Không thể tải danh sách bệnh viện");
 };
 
-export const createHospital = async (payload) => {
-  const response = await fetch(HOSPITALS_ENDPOINT, {
-    method: "POST",
+export const getCities = async () => {
+  const response = await fetch(`${API_BASE_URL}/cities`, {
     headers: {
-      "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
-    body: JSON.stringify(payload),
     credentials: "include",
   });
-  return handleResponse(response, "Không thể tạo bệnh viện");
+  return handleResponse(response, "Không thể tải danh sách thành phố");
 };
+
 
 export const updateHospital = async (id, payload) => {
   const response = await fetch(`${HOSPITALS_ENDPOINT}/${id}`, {

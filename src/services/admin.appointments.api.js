@@ -2,11 +2,14 @@ import { getAuthHeaders, handleResponse } from "./http";
 import { API_BASE_URL } from "../utils/constants";
 const APPOINTMENTS_ENDPOINT = `${API_BASE_URL}/appointments`;
 
-export const getAllAppointments = async (page = 1, limit = 100) => {
+export const getAllAppointments = async (page = 1, limit = 100, status = 'all', hospitalId = 'all') => {
   const queryParams = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
   });
+  if (status && status !== 'all') queryParams.append('status', status);
+  if (hospitalId && hospitalId !== 'all') queryParams.append('hospital_id', hospitalId);
+  
   const response = await fetch(`${APPOINTMENTS_ENDPOINT}?${queryParams.toString()}`, {
     headers: {
       ...getAuthHeaders(),
@@ -95,4 +98,18 @@ export const updateAppointment = async (id, payload) => {
   }
 
   return await response.json();
+};
+
+export const getAvailableTimesForPackage = async (packageId, date) => {
+  const queryParams = new URLSearchParams({ packageId: packageId.toString(), date });
+  const response = await fetch(`${APPOINTMENTS_ENDPOINT}/available-times/package?${queryParams.toString()}`);
+  if (!response.ok) throw new Error("Failed to load slots");
+  return handleResponse(response);
+};
+
+export const getAvailableDoctorsForPackage = async (packageId, date, time) => {
+  const queryParams = new URLSearchParams({ packageId: packageId.toString(), date, time });
+  const response = await fetch(`${APPOINTMENTS_ENDPOINT}/available-doctors/package?${queryParams.toString()}`);
+  if (!response.ok) throw new Error("Failed to load doctors");
+  return handleResponse(response);
 };
