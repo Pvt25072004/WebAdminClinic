@@ -44,6 +44,7 @@ export default function DoctorManagement() {
     license_file: "",
     certificate_file: "",
     cv_file: "",
+    consultation_fee: 200000,
   });
   const fileInputRef = React.useRef(null);
   const [currentUploadTarget, setCurrentUploadTarget] = useState(null);
@@ -171,6 +172,7 @@ export default function DoctorManagement() {
         experience_years: doctorForm.experience_years
           ? Number(doctorForm.experience_years)
           : 0,
+        consultation_fee: doctorForm.consultation_fee ? Number(doctorForm.consultation_fee) : 200000,
         hospital_id: user?.hospital_id || user?.hospital?.id,
       });
       setDoctorForm({
@@ -187,6 +189,7 @@ export default function DoctorManagement() {
         license_file: "",
         certificate_file: "",
         cv_file: "",
+        consultation_fee: 200000,
       });
       showSuccess("Tạo tài khoản bác sĩ thành công");
       void loadDoctors();
@@ -235,6 +238,7 @@ export default function DoctorManagement() {
                   license_file: "",
                   certificate_file: "",
                   cv_file: "",
+                  consultation_fee: 200000,
                 })
               }
             >
@@ -423,6 +427,22 @@ export default function DoctorManagement() {
                 setDoctorForm((prev) => ({
                   ...prev,
                   license_number: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Phí khám bệnh (VNĐ)
+            </label>
+            <input
+              type="number"
+              value={doctorForm.consultation_fee}
+              onChange={(e) =>
+                setDoctorForm((prev) => ({
+                  ...prev,
+                  consultation_fee: Number(e.target.value),
                 }))
               }
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"

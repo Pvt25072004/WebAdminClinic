@@ -2,13 +2,14 @@ import { getAuthHeaders, handleResponse } from "./http";
 import { API_BASE_URL } from "../utils/constants";
 const APPOINTMENTS_ENDPOINT = `${API_BASE_URL}/appointments`;
 
-export const getAllAppointments = async (page = 1, limit = 100, status = 'all', hospitalId = 'all') => {
+export const getAllAppointments = async (page = 1, limit = 100, status = 'all', hospitalId = 'all', search = '') => {
   const queryParams = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
   });
   if (status && status !== 'all') queryParams.append('status', status);
   if (hospitalId && hospitalId !== 'all') queryParams.append('hospital_id', hospitalId);
+  if (search) queryParams.append('search', search);
   
   const response = await fetch(`${APPOINTMENTS_ENDPOINT}?${queryParams.toString()}`, {
     headers: {

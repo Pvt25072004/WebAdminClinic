@@ -4,13 +4,17 @@ import { Plus, Edit3, Trash2, Eye, ToggleLeft, ToggleRight, DollarSign, Clock } 
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { getAllServicePackages, createServicePackage, updateServicePackage, deleteServicePackage } from "../services/admin.servicepackages.api";
+import { getHospitals } from "../services/admin.hospitals.api";
 import { useNotification } from "../contexts/NotificationContext";
+import { useAuth } from "../contexts/AuthContext";
 import { uploadUserImage } from "../services/api";
 import { Image as ImageIcon } from "lucide-react";
 
 export default function ServicePackageManagement() {
   const { showSuccess, showError, confirm } = useNotification();
+  const { user } = useAuth();
   const [packages, setPackages] = useState([]);
+  const [hospitalsList, setHospitalsList] = useState([]);
   const [loading, setLoading] = useState(false);
   
   const [showForm, setShowForm] = useState(false);
@@ -25,6 +29,7 @@ export default function ServicePackageManagement() {
     is_active: true,
     requires_fasting: false,
     image_url: "",
+    hospital_ids: user?.hospital_id ? [user.hospital_id] : [],
   });
 
   const fileInputRef = useRef(null);
@@ -54,8 +59,18 @@ export default function ServicePackageManagement() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await getAllServicePackages();
+      const [data, hospitalsData] = await Promise.all([
+        getAllServicePackages(),
+        getHospitals()
+      ]);
+      
       setPackages(Array.isArray(data) ? data : []);
+      
+      let finalHospitalsList = Array.isArray(hospitalsData) ? hospitalsData : [];
+      if (user?.hospital_id) {
+        finalHospitalsList = finalHospitalsList.filter(h => h.id === user.hospital_id);
+      }
+      setHospitalsList(finalHospitalsList);
     } catch (e) {
       console.error("Load service packages error:", e);
       showError("Không thể tải danh sách gói khám");
@@ -78,6 +93,7 @@ export default function ServicePackageManagement() {
       is_active: true,
       requires_fasting: false,
       image_url: "",
+      hospital_ids: user?.hospital_id ? [user.hospital_id] : [],
     });
     setShowForm(true);
   };
@@ -93,6 +109,7 @@ export default function ServicePackageManagement() {
       is_active: pkg.is_active ?? true,
       requires_fasting: pkg.requires_fasting ?? false,
       image_url: pkg.image_url || "",
+      hospital_ids: pkg.hospitals?.map(h => h.id) || [],
     });
     setShowForm(true);
   };
@@ -134,6 +151,7 @@ export default function ServicePackageManagement() {
         ...formData,
         fixed_price: Number(formData.fixed_price),
         duration_minutes: Number(formData.duration_minutes),
+        hospitals: formData.hospital_ids.map(id => ({ id })),
       };
       
       if (formData.id) {
@@ -324,6 +342,37 @@ export default function ServicePackageManagement() {
                 />
                 <span className="text-sm font-medium">Yêu cầu nhịn ăn</span>
               </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Bệnh viện / Cơ sở áp dụng</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-slate-50 max-h-48 overflow-y-auto">
+                {hospitalsList.map((hosp) => {
+                  const isHospitalAdmin = !!user?.hospital_id;
+                  const isChecked = formData.hospital_ids.includes(hosp.id) || (isHospitalAdmin && hosp.id === user.hospital_id);
+                  return (
+                  <label key={hosp.id} className={`flex items-center gap-2 cursor-pointer bg-white p-2 rounded border transition-colors ${isHospitalAdmin ? 'border-blue-300 bg-blue-50 cursor-default' : 'border-slate-200 hover:border-blue-300'}`}>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      disabled={isHospitalAdmin}
+                      onChange={(e) => {
+                        if (isHospitalAdmin) return;
+                        const { checked } = e.target;
+                        setFormData(prev => ({
+                          ...prev,
+                          hospital_ids: checked 
+                            ? [...prev.hospital_ids, hosp.id] 
+                            : prev.hospital_ids.filter(id => id !== hosp.id)
+                        }));
+                      }}
+                      className="w-4 h-4 text-blue-600 rounded disabled:opacity-70"
+                    />
+                    <span className="text-sm font-medium text-slate-700 line-clamp-1" title={hosp.name}>{hosp.name}</span>
+                  </label>
+                  );
+                })}
+              </div>
             </div>
 
             <div>

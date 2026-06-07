@@ -18,6 +18,7 @@ export default function AppointmentManagement() {
   const { showSuccess, showError, confirm, prompt } = useNotification();
   const [appointments, setAppointments] = useState([]);
   const [searchQuery, setSearchQuery] = useState(location.state?.search || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(location.state?.search || "");
   const [loading, setLoading] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
@@ -45,8 +46,17 @@ export default function AppointmentManagement() {
   useEffect(() => {
     if (location.state?.search !== undefined) {
       setSearchQuery(location.state.search);
+      setDebouncedSearch(location.state.search);
     }
   }, [location.state?.search]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // reset page on search
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (selectedAppointment && selectedAppointment.status === "completed") {
@@ -78,7 +88,7 @@ export default function AppointmentManagement() {
         const charts = await getAdminCharts();
         setAdminCharts(charts || { appointmentsByHospital: [], revenueByHospital: [] });
       }
-      const res = await getAllAppointments(currentPage, limit, filterStatus, filterHospital);
+      const res = await getAllAppointments(currentPage, limit, filterStatus, filterHospital, debouncedSearch);
       if (Array.isArray(res)) {
         setAppointments(res);
         setTotalItems(res.length);
@@ -100,7 +110,7 @@ export default function AppointmentManagement() {
 
   useEffect(() => {
     void loadData();
-  }, [currentPage, limit, isAdmin, filterStatus, filterHospital]);
+  }, [currentPage, limit, isAdmin, filterStatus, filterHospital, debouncedSearch]);
 
   const handleFilterStatusChange = (e) => {
     setFilterStatus(e.target.value);
@@ -237,15 +247,7 @@ export default function AppointmentManagement() {
     }
   };
 
-  const filteredAppointments = appointments.filter((app) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    const patientName = app.patient_name?.toLowerCase() || "";
-    const patientPhone = app.patient_phone?.toLowerCase() || "";
-    const doctorName = app.doctor?.user?.full_name?.toLowerCase() || "";
-    const appId = app.id?.toString() || "";
-    return patientName.includes(q) || patientPhone.includes(q) || doctorName.includes(q) || appId.includes(q);
-  });
+  const filteredAppointments = appointments;
 
   const getStatusBadge = (status) => {
     switch (status) {

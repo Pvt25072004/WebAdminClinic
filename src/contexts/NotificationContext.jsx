@@ -40,7 +40,7 @@ export const NotificationProvider = ({ children }) => {
         message,
         confirmText: options.confirmText || "Xác nhận",
         cancelText: options.cancelText || "Hủy",
-        variant: options.variant || "danger", // 'danger' or 'primary'
+        variant: options.variant || "primary", // 'danger' or 'primary'
         onConfirm: () => {
           setConfirmDialog(null);
           resolve(true);
@@ -62,6 +62,7 @@ export const NotificationProvider = ({ children }) => {
         defaultValue: options.defaultValue || "",
         confirmText: options.confirmText || "Xác nhận",
         cancelText: options.cancelText || "Hủy",
+        variant: options.variant || "primary",
         onConfirm: (inputValue) => {
           setPromptDialog(null);
           resolve(inputValue);
@@ -135,7 +136,7 @@ export const NotificationProvider = ({ children }) => {
                 <Button type="button" variant="outline" onClick={promptDialog.onCancel}>
                   {promptDialog.cancelText}
                 </Button>
-                <Button type="submit" variant="primary">
+                <Button type="submit" variant={promptDialog.variant}>
                   {promptDialog.confirmText}
                 </Button>
               </div>

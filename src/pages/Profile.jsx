@@ -1,8 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import Button from "../components/Button";
 import { useNotification } from "../contexts/NotificationContext";
 import { uploadUserImage, changePassword } from "../services/api";
+import { updateHospital } from "../services/admin.hospitals.api";
+import { Building2, UserCircle } from "lucide-react";
 
 export default function Profile() {
   const { user, updateProfile } = useAuth();
@@ -23,6 +25,22 @@ export default function Profile() {
     confirmPassword: "",
   });
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const [activeTab, setActiveTab] = useState("personal"); // personal | hospital
+  const isAdminHospital = user?.role === "admin_hospital";
+
+  const [hospitalData, setHospitalData] = useState({
+    name: user?.hospital?.name || "",
+    address: user?.hospital?.address || "",
+    phone: user?.hospital?.phone || "",
+    email: user?.hospital?.email || "",
+    description: user?.hospital?.description || "",
+    logo_url: user?.hospital?.logo_url || "",
+    facility_fee: user?.hospital?.facility_fee || 0,
+    main_specialty: user?.hospital?.main_specialty || "",
+  });
+  const [hospitalLoading, setHospitalLoading] = useState(false);
+  const hospitalLogoRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -82,11 +100,79 @@ export default function Profile() {
     }
   };
 
+  const handleHospitalChange = (e) => {
+    setHospitalData({ ...hospitalData, [e.target.name]: e.target.value });
+  };
+
+  const handleHospitalSubmit = async (e) => {
+    e.preventDefault();
+    if (!user?.hospital_id && !user?.hospital?.id) {
+      showError("Không tìm thấy thông tin bệnh viện");
+      return;
+    }
+    setHospitalLoading(true);
+    try {
+      const hospitalId = user?.hospital_id || user?.hospital?.id;
+      const payload = { ...hospitalData };
+      await updateHospital(hospitalId, payload);
+      // It's ideal to update the auth context user's hospital too, but a reload or just success msg is fine
+      showSuccess("Cập nhật thông tin bệnh viện thành công!");
+    } catch (error) {
+      showError("Cập nhật thất bại: " + error.message);
+    } finally {
+      setHospitalLoading(false);
+    }
+  };
+
+  const handleHospitalLogoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      showSuccess("Đang tải logo lên...");
+      const result = await uploadUserImage(file);
+      if (result && result.image_url) {
+        setHospitalData({ ...hospitalData, logo_url: result.image_url });
+        showSuccess("Tải logo thành công!");
+      }
+    } catch (error) {
+      showError("Lỗi tải ảnh: " + error.message);
+    }
+  };
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-6">Hồ sơ cá nhân</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="max-w-4xl mx-auto">
+      {isAdminHospital && (
+        <div className="flex gap-4 mb-6 border-b border-slate-200">
+          <button
+            className={`pb-3 px-2 flex items-center gap-2 font-medium text-sm transition-colors border-b-2 ${
+              activeTab === "personal"
+                ? "border-emerald-500 text-emerald-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+            onClick={() => setActiveTab("personal")}
+          >
+            <UserCircle size={18} />
+            Hồ sơ cá nhân
+          </button>
+          <button
+            className={`pb-3 px-2 flex items-center gap-2 font-medium text-sm transition-colors border-b-2 ${
+              activeTab === "hospital"
+                ? "border-emerald-500 text-emerald-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+            onClick={() => setActiveTab("hospital")}
+          >
+            <Building2 size={18} />
+            Thông tin cơ sở y tế
+          </button>
+        </div>
+      )}
+
+      {activeTab === "personal" && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Hồ sơ cá nhân</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex items-center gap-6 mb-8 max-sm:flex-col max-sm:items-start">
             <div className="shrink-0 relative group">
               <img
@@ -235,7 +321,143 @@ export default function Profile() {
             </div>
           </form>
         </div>
-      </div>
+        </div>
+      )}
+
+      {activeTab === "hospital" && isAdminHospital && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Thông tin Cơ sở y tế</h2>
+          <form onSubmit={handleHospitalSubmit} className="space-y-6">
+            <div className="flex items-center gap-6 mb-8 max-sm:flex-col max-sm:items-start">
+              <div className="shrink-0 relative group">
+                <img
+                  src={hospitalData.logo_url || "https://placehold.co/150x150/e2e8f0/64748b?text=Logo"}
+                  alt="Logo"
+                  className="w-24 h-24 rounded-2xl object-cover border-4 border-slate-50 shadow-sm"
+                />
+                <button 
+                  type="button"
+                  onClick={() => hospitalLogoRef.current?.click()}
+                  className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  Đổi Logo
+                </button>
+              </div>
+              <div className="flex-1 w-full">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Đường dẫn Logo</label>
+                <input
+                  type="text"
+                  name="logo_url"
+                  value={hospitalData.logo_url}
+                  onChange={handleHospitalChange}
+                  placeholder="https://..."
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+                <input 
+                  type="file" 
+                  ref={hospitalLogoRef} 
+                  onChange={handleHospitalLogoChange} 
+                  className="hidden" 
+                  accept="image/*" 
+                />
+                <div className="mt-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => hospitalLogoRef.current?.click()}>
+                    Tải logo lên (Cloudinary)
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Tên cơ sở y tế</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={hospitalData.name}
+                  onChange={handleHospitalChange}
+                  required
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Địa chỉ chi tiết</label>
+                <input
+                  type="text"
+                  name="address"
+                  value={hospitalData.address}
+                  onChange={handleHospitalChange}
+                  required
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Email liên hệ</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={hospitalData.email}
+                  onChange={handleHospitalChange}
+                  required
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Số điện thoại (Hotline)</label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={hospitalData.phone}
+                  onChange={handleHospitalChange}
+                  required
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Chuyên khoa chính</label>
+                <input
+                  type="text"
+                  name="main_specialty"
+                  value={hospitalData.main_specialty}
+                  onChange={handleHospitalChange}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  placeholder="Đa khoa, Nhi khoa, v.v..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Phí cơ sở (VNĐ)</label>
+                <input
+                  type="number"
+                  name="facility_fee"
+                  value={hospitalData.facility_fee}
+                  onChange={handleHospitalChange}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Giới thiệu về cơ sở</label>
+                <textarea
+                  name="description"
+                  value={hospitalData.description}
+                  onChange={handleHospitalChange}
+                  rows="4"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                ></textarea>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <Button type="submit" variant="primary" disabled={hospitalLoading}>
+                {hospitalLoading ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

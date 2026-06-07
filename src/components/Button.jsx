@@ -21,7 +21,8 @@ const Button = ({
   const variants = {
     primary: "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-0.5 border border-emerald-400/50 focus:ring-emerald-500",
     secondary: "bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 focus:ring-slate-500",
-    outline: "border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100 focus:ring-emerald-500",
+    outline: "border-2 border-slate-300 text-slate-700 hover:bg-slate-50 active:bg-slate-100 focus:ring-slate-500",
+    primaryOutline: "border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100 focus:ring-emerald-500",
     ghost: "text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100 focus:ring-emerald-500",
     ghostDanger: "text-red-500 hover:bg-red-50 hover:text-red-600 active:bg-red-100 focus:ring-red-500",
     danger: "bg-red-500 hover:bg-red-600 active:bg-red-700 text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 focus:ring-red-500",

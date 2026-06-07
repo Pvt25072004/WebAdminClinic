@@ -42,6 +42,7 @@ export default function Home() {
     totalRevenue: 0,
     totalHospitals: 0,
     totalUsers: 0,
+    totalDoctors: 0,
     totalAppointments: 0,
     averageStars: "0.0",
     paymentsData: [],
@@ -166,6 +167,7 @@ export default function Home() {
           totalRevenue,
           totalHospitals,
           totalUsers,
+          totalDoctors,
           totalCategories,
           totalAppointments,
           averageStars,
@@ -234,7 +236,7 @@ export default function Home() {
   const hospitalStats = [
     { title: "Doanh thu cơ sở", amount: stats.loading ? "..." : formatCurrency(stats.totalRevenue), Icon: FaMoneyBillWave, onClick: () => navigate("/payment") },
     { title: "Lịch khám (Tổng)", amount: stats.loading ? "..." : stats.totalAppointments.toString(), Icon: FaCalendarCheck, onClick: () => navigate("/schedules") },
-    { title: "Bác sĩ hoạt động", amount: stats.loading ? "..." : stats.totalUsers.toString(), Icon: FaStethoscope, onClick: () => navigate("/doctor") },
+    { title: "Bác sĩ hoạt động", amount: stats.loading ? "..." : stats.totalDoctors.toString(), Icon: FaStethoscope, onClick: () => navigate("/doctor") },
   ];
 
   const statsToDisplay =

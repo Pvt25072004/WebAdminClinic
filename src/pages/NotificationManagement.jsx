@@ -1,8 +1,9 @@
-import { Bell, Megaphone, Send, Users } from "lucide-react";
+import { Bell, Megaphone, Send, Users, Edit3, Trash2, X } from "lucide-react";
 import Button from "../components/Button";
 import { formatDate } from "../utils/helpers";
 import React, { useEffect, useState } from "react";
-import { getSystemNotifications, createNotification } from "../services/admin.notifications.api";
+import { getSystemNotifications, createNotification, updateSystemNotification, deleteSystemNotification } from "../services/admin.notifications.api";
+import { useNotification } from "../contexts/NotificationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { getUsers } from "../services/admin.users.api";
 import { getDoctors } from "../services/admin.doctors.api";
@@ -13,6 +14,8 @@ export default function NotificationManagement() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { confirm, showSuccess, showError } = useNotification();
+  const [editingId, setEditingId] = useState(null);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -61,40 +64,79 @@ export default function NotificationManagement() {
   const handleSendNotification = async (e) => {
     e.preventDefault();
     if (!title.trim() || !body.trim()) {
-      alert("Vui lòng nhập đầy đủ tiêu đề và nội dung!");
+      showError("Vui lòng nhập đầy đủ tiêu đề và nội dung!");
       return;
     }
 
     try {
       setIsSubmitting(true);
       
-      if (target === "all") {
-        // System broadcast to everyone
-        await createNotification({ title, body, type });
-      } else if (target === "all_role") {
-        // Send to all in recipients list individually
-        if (recipients.length === 0) {
-          alert("Không có người nhận nào trong danh sách.");
-          return;
-        }
-        await Promise.all(recipients.map(recipient => 
-          createNotification({ title, body, type, user_id: recipient.id || recipient.user_id })
-        ));
+      if (editingId) {
+        await updateSystemNotification(editingId, { title, body, type });
+        showSuccess("Cập nhật thông báo thành công!");
+        setEditingId(null);
       } else {
-        // Send to specific user
-        await createNotification({ title, body, type, user_id: Number(target) });
+        if (target === "all") {
+          // System broadcast to everyone
+          await createNotification({ title, body, type });
+        } else if (target === "all_role") {
+          // Send to all in recipients list individually
+          if (recipients.length === 0) {
+            showError("Không có người nhận nào trong danh sách.");
+            return;
+          }
+          await Promise.all(recipients.map(recipient => 
+            createNotification({ title, body, type, user_id: recipient.id || recipient.user_id })
+          ));
+        } else {
+          // Send to specific user
+          await createNotification({ title, body, type, user_id: Number(target) });
+        }
+        showSuccess("Gửi thông báo thành công!");
       }
       
-      alert("Gửi thông báo thành công!");
       setTitle("");
       setBody("");
       setType("system");
       setTarget("all");
       loadNotifications();
     } catch (err) {
-      alert(err.message || "Đã xảy ra lỗi khi gửi thông báo.");
+      showError(err.message || "Đã xảy ra lỗi khi xử lý thông báo.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEdit = (notif) => {
+    setEditingId(notif.id);
+    setTitle(notif.title);
+    setBody(notif.body);
+    setType(notif.type || "system");
+    setTarget("all"); // editing is only for system notifications
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setTitle("");
+    setBody("");
+    setType("system");
+    setTarget("all");
+  };
+
+  const handleDelete = async (id) => {
+    const isConfirm = await confirm(
+      "Xác nhận xóa",
+      "Bạn có chắc muốn xóa thông báo này khỏi hệ thống không?",
+      { variant: "danger", confirmText: "Xóa" }
+    );
+    if (!isConfirm) return;
+
+    try {
+      await deleteSystemNotification(id);
+      showSuccess("Đã xóa thông báo");
+      loadNotifications();
+    } catch (e) {
+      showError("Lỗi: " + e.message);
     }
   };
 
@@ -109,8 +151,12 @@ export default function NotificationManagement() {
               <Megaphone className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Gửi thông báo mới</h2>
-              <p className="text-sm text-slate-500">Gửi Broadcast cho toàn hệ thống</p>
+              <h2 className="text-lg font-bold text-slate-900">
+                {editingId ? "Sửa thông báo" : "Gửi thông báo mới"}
+              </h2>
+              <p className="text-sm text-slate-500">
+                {editingId ? "Cập nhật Broadcast hệ thống" : "Gửi Broadcast cho toàn hệ thống"}
+              </p>
             </div>
           </div>
 
@@ -137,6 +183,7 @@ export default function NotificationManagement() {
               <select
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
+                disabled={editingId !== null} // cannot change target when editing system broadcast
                 className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 bg-white"
               >
                 <option value="all">Tất cả người dùng (Global Broadcast)</option>
@@ -176,14 +223,27 @@ export default function NotificationManagement() {
               />
             </div>
 
-            <Button 
-              type="submit"
-              className="w-full justify-center mt-2" 
-              icon={Send}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Đang gửi..." : "Gửi thông báo"}
-            </Button>
+            <div className="flex gap-2 mt-2">
+              {editingId && (
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="flex-1 justify-center"
+                  onClick={handleCancelEdit}
+                  disabled={isSubmitting}
+                >
+                  Hủy
+                </Button>
+              )}
+              <Button 
+                type="submit"
+                className="flex-1 justify-center" 
+                icon={editingId ? null : Send}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Đang xử lý..." : editingId ? "Cập nhật" : "Gửi thông báo"}
+              </Button>
+            </div>
           </form>
         </div>
       </div>
@@ -246,6 +306,25 @@ export default function NotificationManagement() {
                         {notif.type === 'alert' ? 'Cảnh báo khẩn cấp' :
                          notif.type === 'promotion' ? 'Khuyến mãi' : 'Hệ thống'}
                       </span>
+                      <div className="flex-1"></div>
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={() => handleEdit(notif)}
+                            className="text-slate-400 hover:text-blue-500 p-1 rounded transition-colors"
+                            title="Sửa"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(notif.id)}
+                            className="text-slate-400 hover:text-red-500 p-1 rounded transition-colors"
+                            title="Xóa"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

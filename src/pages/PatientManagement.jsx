@@ -124,28 +124,28 @@ export default function PatientManagement() {
               </tr>
             )}
             {!loadingUsers &&
-              visibleUsers.map((user, index) => (
-                <tr key={user.id} className="border-b border-slate-100 hover:bg-emerald-50/50 transition-colors last:border-0">
+              visibleUsers.map((userObj, index) => (
+                <tr key={userObj.id} className="border-b border-slate-100 hover:bg-emerald-50/50 transition-colors last:border-0">
                   <td className="py-3 px-4 text-slate-500 font-medium">
                     {(currentPage - 1) * limit + index + 1}
                   </td>
                   <td className="py-3 px-4 font-medium text-slate-900">
-                    {user.full_name}
+                    {userObj.full_name}
                   </td>
-                  <td className="py-3 px-4 text-slate-500">{user.email}</td>
-                  <td className="py-3 px-4 text-slate-500">{user.phone}</td>
+                  <td className="py-3 px-4 text-slate-500">{userObj.email}</td>
+                  <td className="py-3 px-4 text-slate-500">{userObj.phone}</td>
                   <td className="py-3 px-4 text-center">
-                    {Array.isArray(user.appointments)
-                      ? user.appointments.length
+                    {Array.isArray(userObj.appointments)
+                      ? userObj.appointments.length
                       : "0"}
                   </td>
                   <td className="py-3 px-4 text-right space-x-2">
                     <button
                       type="button"
                       className="inline-flex items-center gap-1.5 text-sm text-slate-600 px-3 py-1.5 rounded-full hover:bg-slate-100 transition-colors"
-                      onClick={() => handleToggleUser(user)}
+                      onClick={() => handleToggleUser(userObj)}
                     >
-                      {(user.is_active ?? true) ? (
+                      {(userObj.is_active ?? true) ? (
                         <>
                           <ToggleRight className="w-4 h-4 text-emerald-500" />
                           <span className="font-medium text-emerald-700">Hoạt động</span>
@@ -157,13 +157,15 @@ export default function PatientManagement() {
                         </>
                       )}
                     </button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      Xóa
-                    </Button>
+                    {user?.role === "admin" && (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleDeleteUser(userObj.id)}
+                      >
+                        Xóa
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
