@@ -12,6 +12,7 @@ import {
   FaCalendarCheck,
   FaStethoscope,
   FaUser,
+  FaRegCalendarAlt,
   FaStar,
 } from "react-icons/fa";
 import { useEffect, useState } from "react";
@@ -19,7 +20,10 @@ import { getHospitalRegistrations } from "../services/admin.hospital.registratio
 import { getHospitals } from "../services/admin.hospitals.api";
 import { getUsers } from "../services/admin.users.api";
 import { getDoctors } from "../services/admin.doctors.api";
-import { getAllPayments, getDashboardStats as getPaymentStats } from "../services/admin.payments.api";
+import {
+  getAllPayments,
+  getDashboardStats as getPaymentStats,
+} from "../services/admin.payments.api";
 import { getCategories } from "../services/admin.categories.api";
 import { getAllAppointments } from "../services/admin.appointments.api";
 import { getDashboardStats } from "../services/admin.dashboard.api";
@@ -59,10 +63,25 @@ export default function Home() {
     const fetchDashboardData = async () => {
       try {
         const hospitalId = user?.hospital_id || user?.hospital?.id;
-        const [hospitals, users, doctors, payments, appointments, statsData, paymentStats, categoriesRes, registrations, reviewsRes] = await Promise.all([
+        const [
+          hospitals,
+          users,
+          doctors,
+          payments,
+          appointments,
+          statsData,
+          paymentStats,
+          categoriesRes,
+          registrations,
+          reviewsRes,
+        ] = await Promise.all([
           getHospitals().catch(() => []),
           getUsers(1, 5).catch(() => []),
-          getDoctors(normalizedRole === "admin_hospital" ? hospitalId : null, 1, 1000).catch(() => []),
+          getDoctors(
+            normalizedRole === "admin_hospital" ? hospitalId : null,
+            1,
+            1000,
+          ).catch(() => []),
           getAllPayments().catch(() => []),
           getAllAppointments(1, 1000).catch(() => []),
           getDashboardStats().catch(() => null),
@@ -73,33 +92,51 @@ export default function Home() {
         ]);
 
         const totalHospitals = statsData?.totalHospitals || 0;
-        const totalUsers = statsData?.totalUsersCount || (statsData?.totalPatients || 0) + (statsData?.totalDoctors || 0);
-        const totalCategories = Array.isArray(categoriesRes) ? categoriesRes.length : 0;
+        const totalUsers =
+          statsData?.totalUsersCount ||
+          (statsData?.totalPatients || 0) + (statsData?.totalDoctors || 0);
+        const totalCategories = Array.isArray(categoriesRes)
+          ? categoriesRes.length
+          : 0;
         const totalAppointments = statsData?.totalAppointments || 0;
         const totalDoctors = statsData?.totalDoctors || 0;
         const totalRevenue = statsData?.totalRevenue || 0;
-        
+
         let totalStars = 0;
-        const reviewsArray = Array.isArray(reviewsRes?.data) ? reviewsRes.data : (Array.isArray(reviewsRes) ? reviewsRes : []);
-        reviewsArray.forEach(r => {
-          totalStars += (Number(r.rating) || 0);
+        const reviewsArray = Array.isArray(reviewsRes?.data)
+          ? reviewsRes.data
+          : Array.isArray(reviewsRes)
+            ? reviewsRes
+            : [];
+        reviewsArray.forEach((r) => {
+          totalStars += Number(r.rating) || 0;
         });
-        const averageStars = reviewsArray.length > 0 ? (totalStars / reviewsArray.length).toFixed(1) : "0.0";
-        
+        const averageStars =
+          reviewsArray.length > 0
+            ? (totalStars / reviewsArray.length).toFixed(1)
+            : "0.0";
+
         const paymentsArray = Array.isArray(payments) ? payments : [];
         const alerts = [];
 
         const recentItems = [];
         const formatTime = (dateString) => {
           if (!dateString) return "Gần đây";
-          return new Intl.DateTimeFormat('vi-VN', {
-            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+          return new Intl.DateTimeFormat("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
           }).format(new Date(dateString));
         };
 
         if (Array.isArray(hospitals) && hospitals.length > 0) {
           const sortedHospitals = [...hospitals]
-            .sort((a,b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+            .sort(
+              (a, b) =>
+                new Date(b.created_at || b.createdAt || 0) -
+                new Date(a.created_at || a.createdAt || 0),
+            )
             .slice(0, 5);
           sortedHospitals.forEach((h, index) => {
             recentItems.push({
@@ -108,15 +145,24 @@ export default function Home() {
               amount: index === 0 ? "Mới nhất" : "",
               type: "positive",
               Icon: FaHospital,
-              onClick: () => navigate("/hospital", { state: { selectedHospitalId: h.id } })
+              onClick: () =>
+                navigate("/hospital", { state: { selectedHospitalId: h.id } }),
             });
           });
         }
 
-        const usersList = Array.isArray(users) ? users : (Array.isArray(users?.data) ? users.data : []);
+        const usersList = Array.isArray(users)
+          ? users
+          : Array.isArray(users?.data)
+            ? users.data
+            : [];
         if (usersList.length > 0) {
           const sortedUsers = [...usersList]
-            .sort((a,b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+            .sort(
+              (a, b) =>
+                new Date(b.created_at || b.createdAt || 0) -
+                new Date(a.created_at || a.createdAt || 0),
+            )
             .slice(0, 5);
           sortedUsers.forEach((u, index) => {
             alerts.push({
@@ -126,16 +172,27 @@ export default function Home() {
               type: "positive",
               isAvatar: true,
               image: u.avatar_url || "",
-              Icon: FaUser
+              Icon: FaUser,
             });
           });
         }
 
-        const appointmentsList = Array.isArray(appointments) ? appointments : (Array.isArray(appointments?.data) ? appointments.data : []);
+        const appointmentsList = Array.isArray(appointments)
+          ? appointments
+          : Array.isArray(appointments?.data)
+            ? appointments.data
+            : [];
         const recentAppointments = [];
-        if (normalizedRole === "admin_hospital" && appointmentsList.length > 0) {
+        if (
+          normalizedRole === "admin_hospital" &&
+          appointmentsList.length > 0
+        ) {
           const sortedAppointments = [...appointmentsList]
-            .sort((a,b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+            .sort(
+              (a, b) =>
+                new Date(b.created_at || b.createdAt || 0) -
+                new Date(a.created_at || a.createdAt || 0),
+            )
             .slice(0, 5);
           sortedAppointments.forEach((a, index) => {
             recentAppointments.push({
@@ -143,14 +200,20 @@ export default function Home() {
               time: formatTime(a.created_at || a.createdAt),
               amount: a.status === "pending" ? "Chờ xác nhận" : "Đã duyệt",
               type: a.status === "pending" ? "negative" : "positive",
-              Icon: FaCalendarCheck
+              Icon: FaCalendarCheck,
             });
           });
         }
 
         const registrationRequests = [];
-        if (normalizedRole === "admin" && Array.isArray(registrations) && registrations.length > 0) {
-          const pendingRegs = registrations.filter(r => r.status === "pending");
+        if (
+          normalizedRole === "admin" &&
+          Array.isArray(registrations) &&
+          registrations.length > 0
+        ) {
+          const pendingRegs = registrations.filter(
+            (r) => r.status === "pending",
+          );
           pendingRegs.slice(0, 5).forEach((r, index) => {
             registrationRequests.push({
               title: r.hospital_name || "Đăng ký cơ sở mới",
@@ -158,7 +221,7 @@ export default function Home() {
               amount: "Chờ duyệt",
               type: "negative",
               Icon: FaHospital,
-              onClick: () => navigate("/hospital-registrations")
+              onClick: () => navigate("/hospital-registrations"),
             });
           });
         }
@@ -173,8 +236,16 @@ export default function Home() {
           averageStars,
           paymentsData: paymentsArray,
           appointmentsData: appointmentsList,
-          hospitalsData: Array.isArray(hospitals) ? hospitals : (Array.isArray(hospitals?.data) ? hospitals.data : []),
-          doctorsData: Array.isArray(doctors) ? doctors : (Array.isArray(doctors?.data) ? doctors.data : []),
+          hospitalsData: Array.isArray(hospitals)
+            ? hospitals
+            : Array.isArray(hospitals?.data)
+              ? hospitals.data
+              : [],
+          doctorsData: Array.isArray(doctors)
+            ? doctors
+            : Array.isArray(doctors?.data)
+              ? doctors.data
+              : [],
           recentItems,
           alerts,
           recentAppointments,
@@ -184,14 +255,17 @@ export default function Home() {
         });
       } catch (err) {
         console.error("Dashboard fetch error", err);
-        setStats(s => ({ ...s, loading: false }));
+        setStats((s) => ({ ...s, loading: false }));
       }
     };
     fetchDashboardData();
   }, []);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
   };
 
   const adminStats = [
@@ -234,9 +308,24 @@ export default function Home() {
   ];
 
   const hospitalStats = [
-    { title: "Doanh thu cơ sở", amount: stats.loading ? "..." : formatCurrency(stats.totalRevenue), Icon: FaMoneyBillWave, onClick: () => navigate("/payment") },
-    { title: "Lịch khám (Tổng)", amount: stats.loading ? "..." : stats.totalAppointments.toString(), Icon: FaCalendarCheck, onClick: () => navigate("/schedules") },
-    { title: "Bác sĩ hoạt động", amount: stats.loading ? "..." : stats.totalDoctors.toString(), Icon: FaStethoscope, onClick: () => navigate("/doctor") },
+    {
+      title: "Doanh thu cơ sở",
+      amount: stats.loading ? "..." : formatCurrency(stats.totalRevenue),
+      Icon: FaMoneyBillWave,
+      onClick: () => navigate("/payment"),
+    },
+    {
+      title: "Lịch khám (Tổng)",
+      amount: stats.loading ? "..." : stats.totalAppointments.toString(),
+      Icon: FaRegCalendarAlt,
+      onClick: () => navigate("/appointment"),
+    },
+    {
+      title: "Bác sĩ hoạt động",
+      amount: stats.loading ? "..." : stats.totalDoctors.toString(),
+      Icon: FaStethoscope,
+      onClick: () => navigate("/doctor"),
+    },
   ];
 
   const statsToDisplay =
@@ -254,23 +343,41 @@ export default function Home() {
         <section className="grid grid-cols-2 gap-6 max-xl:grid-cols-1">
           {normalizedRole === "admin" ? (
             <>
-              <TransactionCard title="Yêu cầu đăng ký bệnh viện mới" items={stats.registrationRequests} />
-              <TransactionCard title="Danh sách bệnh viện mới nhất" items={stats.recentItems} />
+              <TransactionCard
+                title="Yêu cầu đăng ký bệnh viện mới"
+                items={stats.registrationRequests}
+              />
+              <TransactionCard
+                title="Danh sách bệnh viện mới nhất"
+                items={stats.recentItems}
+              />
             </>
           ) : (
             <>
-              <TransactionCard title="Bệnh nhân mới (Hệ thống)" items={stats.alerts} />
-              <TransactionCard title="Lịch hẹn mới nhất" items={stats.recentAppointments} />
+              <TransactionCard
+                title="Bệnh nhân mới (Hệ thống)"
+                items={stats.alerts}
+              />
+              <TransactionCard
+                title="Lịch hẹn mới nhất"
+                items={stats.recentAppointments}
+              />
             </>
           )}
         </section>
       </div>
 
       <aside className="flex flex-col gap-8">
-        <SavingsCard timeOptions={["Daily", "Weekly", "Monthly", "Yearly"]} chartData={stats.revenueChart} paymentsData={stats.paymentsData} />
-        <AppointmentsChart 
-          appointments={stats.totalAppointments > 0 ? stats.appointmentsData : []} 
-          hospitals={stats.hospitalsData} 
+        <SavingsCard
+          timeOptions={["Daily", "Weekly", "Monthly", "Yearly"]}
+          chartData={stats.revenueChart}
+          paymentsData={stats.paymentsData}
+        />
+        <AppointmentsChart
+          appointments={
+            stats.totalAppointments > 0 ? stats.appointmentsData : []
+          }
+          hospitals={stats.hospitalsData}
           doctors={stats.doctorsData}
           role={normalizedRole}
         />
