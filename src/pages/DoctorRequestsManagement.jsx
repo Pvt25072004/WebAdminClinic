@@ -13,10 +13,11 @@ export default function DoctorRequestsManagement() {
   const [selectedRequest, setSelectedRequest] = useState(null);
 
   const loadRequests = async () => {
-    if (!user?.hospital_id) return;
+    const currentHospitalId = user?.hospital_id || user?.hospital?.id;
+    if (!currentHospitalId) return;
     try {
       setLoading(true);
-      const data = await getRequestsByHospital(user.hospital_id);
+      const data = await getRequestsByHospital(currentHospitalId);
       setRequests(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Load requests error:", e);
@@ -27,7 +28,7 @@ export default function DoctorRequestsManagement() {
 
   useEffect(() => {
     void loadRequests();
-  }, [user?.hospital_id]);
+  }, [user?.hospital_id, user?.hospital?.id]);
 
   const handleApprove = async (id) => {
     try {

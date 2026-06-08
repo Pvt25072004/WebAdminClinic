@@ -3,7 +3,8 @@ import { useAuth } from "../contexts/AuthContext";
 import Button from "../components/Button";
 import { useNotification } from "../contexts/NotificationContext";
 import { uploadUserImage, changePassword } from "../services/api";
-import { updateHospital } from "../services/admin.hospitals.api";
+import { updateHospital, getHospitalById } from "../services/admin.hospitals.api";
+import { getCategories } from "../services/admin.categories.api";
 import { Building2, UserCircle } from "lucide-react";
 
 export default function Profile() {
@@ -38,9 +39,45 @@ export default function Profile() {
     logo_url: user?.hospital?.logo_url || "",
     facility_fee: user?.hospital?.facility_fee || 0,
     main_specialty: user?.hospital?.main_specialty || "",
+    categoryIds: user?.hospital?.categories?.map(c => c.id) || [],
   });
   const [hospitalLoading, setHospitalLoading] = useState(false);
   const hospitalLogoRef = useRef(null);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    if (isAdminHospital) {
+      getCategories()
+        .then((res) => {
+          setCategories(Array.isArray(res) ? res : res.data || []);
+        })
+        .catch((e) => console.log(e));
+
+      const hospitalId = user?.hospital_id || user?.hospital?.id;
+      if (hospitalId) {
+        setHospitalLoading(true);
+        getHospitalById(hospitalId)
+          .then((res) => {
+            const data = res.data || res;
+            if (data) {
+              setHospitalData({
+                name: data.name || "",
+                address: data.address || "",
+                phone: data.phone || "",
+                email: data.email || user?.email || "",
+                description: data.description || "",
+                logo_url: data.logo_url || "",
+                facility_fee: data.facility_fee || 0,
+                main_specialty: data.main_specialty || "",
+                categoryIds: data.categories?.map((c) => c.id) || [],
+              });
+            }
+          })
+          .catch((e) => console.log(e))
+          .finally(() => setHospitalLoading(false));
+      }
+    }
+  }, [isAdminHospital, user?.hospital_id, user?.hospital?.id]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -418,14 +455,28 @@ export default function Profile() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Chuyên khoa chính</label>
-                <input
-                  type="text"
-                  name="main_specialty"
-                  value={hospitalData.main_specialty}
-                  onChange={handleHospitalChange}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                  placeholder="Đa khoa, Nhi khoa, v.v..."
-                />
+                <div className="w-full px-4 py-2 border border-slate-200 rounded-xl bg-white max-h-48 overflow-y-auto">
+                  {categories.length === 0 && <span className="text-slate-400 text-sm">Đang tải chuyên khoa...</span>}
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((cat) => (
+                      <label key={cat.id} className="flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500"
+                          checked={hospitalData.categoryIds?.includes(cat.id)}
+                          onChange={(e) => {
+                            const currentIds = hospitalData.categoryIds || [];
+                            const newIds = e.target.checked
+                              ? [...currentIds, cat.id]
+                              : currentIds.filter((id) => id !== cat.id);
+                            setHospitalData({ ...hospitalData, categoryIds: newIds });
+                          }}
+                        />
+                        <span className="text-sm text-slate-700">{cat.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Phí cơ sở (VNĐ)</label>

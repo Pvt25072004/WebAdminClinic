@@ -18,6 +18,16 @@ export const getHospitals = async () => {
   return handleResponse(response, "Không thể tải danh sách bệnh viện");
 };
 
+export const getHospitalById = async (id) => {
+  const response = await fetch(`${HOSPITALS_ENDPOINT}/${id}`, {
+    headers: {
+      ...getAuthHeaders(),
+    },
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể tải thông tin bệnh viện");
+};
+
 export const getCities = async () => {
   const response = await fetch(`${API_BASE_URL}/cities`, {
     headers: {
