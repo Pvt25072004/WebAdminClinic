@@ -294,6 +294,7 @@ export default function ServicePackageManagement() {
                     name="fixed_price"
                     value={formData.fixed_price}
                     onChange={handleChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full pl-9 p-2 border rounded focus:ring focus:ring-blue-200 outline-none"
                     placeholder="0"
                     min="0"
@@ -311,6 +312,7 @@ export default function ServicePackageManagement() {
                     name="duration_minutes"
                     value={formData.duration_minutes}
                     onChange={handleChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full pl-9 p-2 border rounded focus:ring focus:ring-blue-200 outline-none"
                     placeholder="30"
                     min="15"
