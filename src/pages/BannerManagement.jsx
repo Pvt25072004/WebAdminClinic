@@ -21,13 +21,22 @@ const initialForm = {
   end_date: "",
   category_id: "",
   doctor_id: "",
+  hospital_id: "",
 };
 
 import { useNotification } from "../contexts/NotificationContext";
+import { useAuth } from "../contexts/AuthContext";
+import { getDoctors } from "../services/admin.doctors.api";
+import { getCategories } from "../services/admin.categories.api";
+import { getHospitals } from "../services/admin.hospitals.api";
 
 export default function BannerManagement() {
+  const { user } = useAuth();
   const { showSuccess, showError, confirm } = useNotification();
   const [banners, setBanners] = useState([]);
+  const [doctorsList, setDoctorsList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [hospitalsList, setHospitalsList] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -37,11 +46,29 @@ export default function BannerManagement() {
   const loadBanners = async () => {
     try {
       setLoading(true);
-      const data = await getHospitalBanners();
-      const sortedData = (data || []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-      setBanners(sortedData);
+      
+      const currentHospitalId = user?.hospital_id || user?.hospital?.id || null;
+      
+      const [bannersData, doctorsData, categoriesData, hospitalsData] = await Promise.all([
+        getHospitalBanners().catch(() => []),
+        getDoctors(currentHospitalId, 1, 1000).catch(() => []),
+        getCategories().catch(() => []),
+        getHospitals().catch(() => []),
+      ]);
+
+      const sortedBanners = (bannersData || []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      setBanners(sortedBanners);
+
+      const docs = Array.isArray(doctorsData) ? doctorsData : (Array.isArray(doctorsData?.data) ? doctorsData.data : []);
+      setDoctorsList(docs);
+
+      const cats = Array.isArray(categoriesData) ? categoriesData : (Array.isArray(categoriesData?.data) ? categoriesData.data : []);
+      setCategoriesList(cats);
+
+      const hosps = Array.isArray(hospitalsData) ? hospitalsData : (Array.isArray(hospitalsData?.data) ? hospitalsData.data : []);
+      setHospitalsList(hosps);
     } catch (error) {
-      showError(error.message || "Lỗi tải banner");
+      showError(error.message || "Lỗi tải dữ liệu");
     } finally {
       setLoading(false);
     }
@@ -82,6 +109,7 @@ export default function BannerManagement() {
       end_date: data.end_date || null,
       category_id: data.category_id ? Number(data.category_id) : null,
       doctor_id: data.doctor_id ? Number(data.doctor_id) : null,
+      hospital_id: data.hospital_id ? Number(data.hospital_id) : null,
     };
   };
 
@@ -90,7 +118,6 @@ export default function BannerManagement() {
 
     try {
       setLoading(true);
-      setMessage("");
 
       let imageData = {
         image_url: form.image_url,
@@ -146,6 +173,7 @@ export default function BannerManagement() {
       end_date: banner.end_date ? banner.end_date.slice(0, 10) : "",
       category_id: banner.category_id || "",
       doctor_id: banner.doctor_id || "",
+      hospital_id: banner.hospital_id || "",
     });
 
     setPreviewUrl(banner.image_url || "");
@@ -264,33 +292,62 @@ export default function BannerManagement() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium">
-                    Category ID
+                    Bệnh viện
                   </label>
-                  <input
-                    name="category_id"
-                    value={form.category_id}
+                  <select
+                    name="hospital_id"
+                    value={form.hospital_id}
                     onChange={handleChange}
-                    type="number"
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
-                    placeholder="Optional"
-                  />
+                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500 bg-white"
+                  >
+                    <option value="">-- Chọn bệnh viện --</option>
+                    {hospitalsList.map((hosp) => (
+                      <option key={hosp.id} value={hosp.id}>
+                        {hosp.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-medium">
-                    Doctor ID
+                    Chuyên khoa
                   </label>
-                  <input
+                  <select
+                    name="category_id"
+                    value={form.category_id}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500 bg-white"
+                  >
+                    <option value="">-- Chọn chuyên khoa --</option>
+                    {categoriesList.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Bác sĩ
+                  </label>
+                  <select
                     name="doctor_id"
                     value={form.doctor_id}
                     onChange={handleChange}
-                    type="number"
-                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500"
-                    placeholder="Optional"
-                  />
+                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-emerald-500 bg-white"
+                  >
+                    <option value="">-- Chọn bác sĩ --</option>
+                    {doctorsList.map((doc) => (
+                      <option key={doc.id} value={doc.id}>
+                        {doc.user?.full_name || doc.name || doc.user?.name || `BS ID: ${doc.id}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -408,19 +465,18 @@ export default function BannerManagement() {
                           {banner.title}
                         </h3>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] shrink-0 font-medium ${
-                            !banner.is_active
+                          className={`rounded-full px-2 py-0.5 text-[10px] shrink-0 font-medium ${!banner.is_active
                               ? "bg-slate-100 text-slate-600"
                               : banner.end_date && new Date(banner.end_date) < new Date()
-                              ? "bg-red-100 text-red-700"
-                              : "bg-emerald-100 text-emerald-700"
-                          }`}
+                                ? "bg-red-100 text-red-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
                         >
                           {!banner.is_active
                             ? "Inactive"
                             : banner.end_date && new Date(banner.end_date) < new Date()
-                            ? "Hết hạn"
-                            : "Active"}
+                              ? "Hết hạn"
+                              : "Active"}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 line-clamp-2 mb-2">
@@ -428,8 +484,33 @@ export default function BannerManagement() {
                       </p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
                         <p>Ưu tiên: <b>{banner.priority}</b></p>
-                        {banner.doctor_id && <p>BS ID: <b>{banner.doctor_id}</b></p>}
-                        {banner.category_id && <p>CK ID: <b>{banner.category_id}</b></p>}
+                        {banner.hospital_id && (
+                          <p>
+                            Bệnh viện:{" "}
+                            <b>
+                              {hospitalsList.find((h) => h.id === Number(banner.hospital_id))?.name || banner.hospital_id}
+                            </b>
+                          </p>
+                        )}
+                        {banner.doctor_id && (
+                          <p>
+                            Bác sĩ:{" "}
+                            <b>
+                              {(() => {
+                                const d = doctorsList.find((doc) => doc.id === Number(banner.doctor_id));
+                                return d ? (d.user?.full_name || d.name || d.user?.name) : banner.doctor_id;
+                              })()}
+                            </b>
+                          </p>
+                        )}
+                        {banner.category_id && (
+                          <p>
+                            Khoa:{" "}
+                            <b>
+                              {categoriesList.find((c) => c.id === Number(banner.category_id))?.name || banner.category_id}
+                            </b>
+                          </p>
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 mt-1">
                         <p>Bắt đầu: <b>{banner.start_date ? new Date(banner.start_date).toLocaleDateString("vi-VN") : "Ngay lập tức"}</b></p>
