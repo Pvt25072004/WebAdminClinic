@@ -130,12 +130,14 @@ export default function HospitalRegistrationRequests() {
                       Từ chối / Yêu cầu sửa
                     </Button>
                     <Button
-                      onClick={() => {
-                        confirm({
-                          title: "Phê duyệt cơ sở y tế",
-                          content: "Sau khi phê duyệt, hệ thống sẽ gửi mật khẩu đăng nhập cho Bệnh viện qua email.",
-                          onConfirm: () => handleAction(selectedReq.id, "approved"),
-                        });
+                      onClick={async () => {
+                        const isConfirmed = await confirm(
+                          "Phê duyệt cơ sở y tế",
+                          "Sau khi phê duyệt, hệ thống sẽ gửi mật khẩu đăng nhập cho Bệnh viện qua email."
+                        );
+                        if (isConfirmed) {
+                          handleAction(selectedReq.id, "approved");
+                        }
                       }}
                       disabled={actionLoading}
                     >

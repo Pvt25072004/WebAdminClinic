@@ -6,7 +6,7 @@ import Sidebar from "./components/Sidebar";
 import TransactionCard from "./components/TransactionCard";
 import TransferCard from "./components/TransferCard";
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from "react";
 
 // Lazy load các trang để tăng tốc độ tải ứng dụng (Code Splitting)
 const Home = lazy(() => import("./pages/Home"));
@@ -16,17 +16,29 @@ const BannerManagement = lazy(() => import("./pages/BannerManagement"));
 const HospitalManagement = lazy(() => import("./pages/HospitalManagement"));
 const CategoryManagement = lazy(() => import("./pages/CategoryManagement"));
 const PaymentManagement = lazy(() => import("./pages/PaymentManagement"));
-const AppointmentManagement = lazy(() => import("./pages/AppointmentManagement"));
-const ServicePackageManagement = lazy(() => import("./pages/ServicePackageManagement"));
+const AppointmentManagement = lazy(
+  () => import("./pages/AppointmentManagement"),
+);
+const ServicePackageManagement = lazy(
+  () => import("./pages/ServicePackageManagement"),
+);
 const SchedulesManagement = lazy(() => import("./pages/SchedulesManagement"));
-const NotificationManagement = lazy(() => import("./pages/NotificationManagement"));
+const NotificationManagement = lazy(
+  () => import("./pages/NotificationManagement"),
+);
 const NewsManagement = lazy(() => import("./pages/NewsManagement"));
 const SocialManagement = lazy(() => import("./pages/SocialManagement"));
-const FanpagePostManagement = lazy(() => import("./pages/FanpagePostManagement"));
+const FanpagePostManagement = lazy(
+  () => import("./pages/FanpagePostManagement"),
+);
 const ReviewManagement = lazy(() => import("./pages/ReviewManagement"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
-const DoctorRequestsManagement = lazy(() => import("./pages/DoctorRequestsManagement"));
-const HospitalRegistrationRequests = lazy(() => import("./pages/HospitalRegistrationRequests"));
+const DoctorRequestsManagement = lazy(
+  () => import("./pages/DoctorRequestsManagement"),
+);
+const HospitalRegistrationRequests = lazy(
+  () => import("./pages/HospitalRegistrationRequests"),
+);
 const Profile = lazy(() => import("./pages/Profile"));
 const Login = lazy(() => import("./pages/Login"));
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -39,7 +51,7 @@ import {
   Outlet,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const AdminLayout = () => {
   return (
@@ -47,14 +59,18 @@ const AdminLayout = () => {
       <Sidebar />
       <main className="ml-[280px] max-w-[1800px] flex-1 p-10 max-xl:p-8 max-lg:ml-20 max-md:p-5">
         <Header />
-        <Suspense fallback={
-          <div className="flex h-[50vh] items-center justify-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-              <p className="text-sm font-medium text-slate-500">Đang tải trang...</p>
+        <Suspense
+          fallback={
+            <div className="flex h-[50vh] items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
+                <p className="text-sm font-medium text-slate-500">
+                  Đang tải trang...
+                </p>
+              </div>
             </div>
-          </div>
-        }>
+          }
+        >
           <Outlet />
         </Suspense>
       </main>
@@ -136,7 +152,13 @@ const AppRouter = () => {
       <Route
         path="/"
         element={
-          <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div></div>}>
+          <Suspense
+            fallback={
+              <div className="flex h-screen items-center justify-center">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
+              </div>
+            }
+          >
             {isUserAdmin ? <Navigate to="/dashboard" replace /> : <Login />}
           </Suspense>
         }
@@ -153,21 +175,66 @@ const AppRouter = () => {
         <Route path="/dashboard" element={<Home />} />
         <Route path="/patient" element={<PatientManagement />} />
         <Route path="/doctor" element={<DoctorManagement />} />
-        <Route path="/banner" element={<RequireSuperAdmin><BannerManagement /></RequireSuperAdmin>} />
-        <Route path="/hospital" element={<RequireSuperAdmin><HospitalManagement /></RequireSuperAdmin>} />
-        <Route path="/category" element={<RequireSuperAdmin><CategoryManagement /></RequireSuperAdmin>} />
-        <Route path="/service-packages" element={<ServicePackageManagement />} />
+        <Route
+          path="/banner"
+          element={
+            <RequireSuperAdmin>
+              <BannerManagement />
+            </RequireSuperAdmin>
+          }
+        />
+        <Route
+          path="/hospital"
+          element={
+            <RequireSuperAdmin>
+              <HospitalManagement />
+            </RequireSuperAdmin>
+          }
+        />
+        <Route
+          path="/category"
+          element={
+            <RequireSuperAdmin>
+              <CategoryManagement />
+            </RequireSuperAdmin>
+          }
+        />
+        <Route
+          path="/service-packages"
+          element={<ServicePackageManagement />}
+        />
         <Route path="/schedules" element={<SchedulesManagement />} />
         <Route path="/notifications" element={<NotificationManagement />} />
         <Route path="/appointment" element={<AppointmentManagement />} />
         <Route path="/payment" element={<PaymentManagement />} />
-        <Route path="/news" element={<RequireSuperAdmin><NewsManagement /></RequireSuperAdmin>} />
+        <Route
+          path="/news"
+          element={
+            <RequireSuperAdmin>
+              <NewsManagement />
+            </RequireSuperAdmin>
+          }
+        />
         <Route path="/social" element={<SocialManagement />} />
         <Route path="/fanpage-posts" element={<FanpagePostManagement />} />
         <Route path="/review" element={<ReviewManagement />} />
-        <Route path="/users" element={<RequireSuperAdmin><UserManagement /></RequireSuperAdmin>} />
+        <Route
+          path="/users"
+          element={
+            <RequireSuperAdmin>
+              <UserManagement />
+            </RequireSuperAdmin>
+          }
+        />
         <Route path="/doctor-requests" element={<DoctorRequestsManagement />} />
-        <Route path="/hospital-registrations" element={<RequireSuperAdmin><HospitalRegistrationRequests /></RequireSuperAdmin>} />
+        <Route
+          path="/hospital-registrations"
+          element={
+            <RequireSuperAdmin>
+              <HospitalRegistrationRequests />
+            </RequireSuperAdmin>
+          }
+        />
         <Route path="/profile" element={<Profile />} />
       </Route>
 
@@ -178,6 +245,8 @@ const AppRouter = () => {
 };
 
 import ErrorBoundary from "./components/ErrorBoundary";
+import NetworkStatusIndicator from "./components/NetworkStatusIndicator";
+import OfflineQueueIndicator from "./components/OfflineQueueIndicator";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -195,6 +264,8 @@ export default function App() {
         <NotificationProvider>
           <AuthProvider>
             <BrowserRouter>
+              <NetworkStatusIndicator />
+              <OfflineQueueIndicator />
               <AppRouter />
             </BrowserRouter>
           </AuthProvider>

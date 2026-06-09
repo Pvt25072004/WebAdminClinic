@@ -3,7 +3,11 @@ import { useAuth } from "../contexts/AuthContext";
 import Button from "../components/Button";
 import { useNotification } from "../contexts/NotificationContext";
 import { uploadUserImage, changePassword } from "../services/api";
-import { updateHospital } from "../services/admin.hospitals.api";
+import {
+  updateHospital,
+  getHospitalById,
+} from "../services/admin.hospitals.api";
+import { getCategories } from "../services/admin.categories.api";
 import { Building2, UserCircle } from "lucide-react";
 
 export default function Profile() {
@@ -38,9 +42,45 @@ export default function Profile() {
     logo_url: user?.hospital?.logo_url || "",
     facility_fee: user?.hospital?.facility_fee || 0,
     main_specialty: user?.hospital?.main_specialty || "",
+    categoryIds: user?.hospital?.categories?.map((c) => c.id) || [],
   });
   const [hospitalLoading, setHospitalLoading] = useState(false);
   const hospitalLogoRef = useRef(null);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    if (isAdminHospital) {
+      getCategories()
+        .then((res) => {
+          setCategories(Array.isArray(res) ? res : res.data || []);
+        })
+        .catch((e) => console.log(e));
+
+      const hospitalId = user?.hospital_id || user?.hospital?.id;
+      if (hospitalId) {
+        setHospitalLoading(true);
+        getHospitalById(hospitalId)
+          .then((res) => {
+            const data = res.data || res;
+            if (data) {
+              setHospitalData({
+                name: data.name || "",
+                address: data.address || "",
+                phone: data.phone || "",
+                email: data.email || user?.email || "",
+                description: data.description || "",
+                logo_url: data.logo_url || "",
+                facility_fee: data.facility_fee || 0,
+                main_specialty: data.main_specialty || "",
+                categoryIds: data.categories?.map((c) => c.id) || [],
+              });
+            }
+          })
+          .catch((e) => console.log(e))
+          .finally(() => setHospitalLoading(false));
+      }
+    }
+  }, [isAdminHospital, user?.hospital_id, user?.hospital?.id]);
 
   useEffect(() => {
     if (user) {
@@ -116,7 +156,11 @@ export default function Profile() {
         newPassword: passwordData.newPassword,
       });
       showSuccess("Đổi mật khẩu thành công!");
-      setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordData({
+        oldPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (error) {
       showError(error.message || "Đổi mật khẩu thất bại");
     } finally {
@@ -195,171 +239,222 @@ export default function Profile() {
 
       {activeTab === "personal" && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Hồ sơ cá nhân</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">
+            Hồ sơ cá nhân
+          </h2>
           <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex items-center gap-6 mb-8 max-sm:flex-col max-sm:items-start">
-            <div className="shrink-0 relative group">
-              <img
-                src={formData.avatar_url || "https://i.pravatar.cc/150?img=8"}
-                alt="Avatar"
-                className="w-24 h-24 rounded-full object-cover border-4 border-slate-50 shadow-sm"
-              />
-              <button 
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                Đổi ảnh
-              </button>
-            </div>
-            <div className="flex-1 w-full">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Đường dẫn ảnh đại diện (Tự động cập nhật khi upload)</label>
-              <input
-                type="text"
-                name="avatar_url"
-                value={formData.avatar_url}
-                onChange={handleChange}
-                placeholder="https://..."
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              />
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                className="hidden" 
-                accept="image/*" 
-              />
-              <div className="mt-2 flex gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                  Tải ảnh lên (Cloudinary)
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Họ và tên</label>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Số điện thoại</label>
-              <input
-                type="text"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              />
-            </div>
-            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Giới tính</label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all bg-white"
+            <div className="flex items-center gap-6 mb-8 max-sm:flex-col max-sm:items-start">
+              <div className="shrink-0 relative group">
+                <img
+                  src={formData.avatar_url || "https://i.pravatar.cc/150?img=8"}
+                  alt="Avatar"
+                  className="w-24 h-24 rounded-full object-cover border-4 border-slate-50 shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  <option value="">Chưa xác định</option>
-                  <option value="male">Nam</option>
-                  <option value="female">Nữ</option>
-                  <option value="other">Khác</option>
-                </select>
+                  Đổi ảnh
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Địa chỉ</label>
+              <div className="flex-1 w-full">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Đường dẫn ảnh đại diện (Tự động cập nhật khi upload)
+                </label>
                 <input
                   type="text"
-                  name="address"
-                  value={formData.address}
+                  name="avatar_url"
+                  value={formData.avatar_url}
+                  onChange={handleChange}
+                  placeholder="https://..."
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Tải ảnh lên (Cloudinary)
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Họ và tên
+                </label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Số điện thoại
+                </label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                 />
               </div>
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Giới tính
+                  </label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all bg-white"
+                  >
+                    <option value="">Chưa xác định</option>
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                    <option value="other">Khác</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Địa chỉ
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Email (Không thể thay đổi)
+                </label>
+                <input
+                  type="email"
+                  value={user?.email || ""}
+                  disabled
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed"
+                />
+              </div>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Email (Không thể thay đổi)</label>
-              <input
-                type="email"
-                value={user?.email || ""}
-                disabled
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed"
-              />
-            </div>
-          </div>
 
-          <div className="flex justify-end pt-4 border-b border-slate-100 pb-8">
-            <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? "Đang lưu..." : "Lưu thay đổi"}
-            </Button>
-          </div>
-        </form>
-
-        <div className="mt-8">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">Đổi mật khẩu</h2>
-          <form onSubmit={handlePasswordChange} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Mật khẩu hiện tại</label>
-                <input
-                  type="password"
-                  value={passwordData.oldPassword}
-                  onChange={e => setPasswordData({...passwordData, oldPassword: e.target.value})}
-                  required
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Mật khẩu mới</label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})}
-                  required
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Xác nhận mật khẩu mới</label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                  required
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end pt-4">
-              <Button type="submit" variant="secondary" disabled={passwordLoading}>
-                {passwordLoading ? "Đang xử lý..." : "Cập nhật mật khẩu"}
+            <div className="flex justify-end pt-4 border-b border-slate-100 pb-8">
+              <Button type="submit" variant="primary" disabled={loading}>
+                {loading ? "Đang lưu..." : "Lưu thay đổi"}
               </Button>
             </div>
           </form>
-        </div>
+
+          <div className="mt-8">
+            <h2 className="text-xl font-bold text-slate-900 mb-6">
+              Đổi mật khẩu
+            </h2>
+            <form onSubmit={handlePasswordChange} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Mật khẩu hiện tại
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.oldPassword}
+                    onChange={(e) =>
+                      setPasswordData({
+                        ...passwordData,
+                        oldPassword: e.target.value,
+                      })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Mật khẩu mới
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) =>
+                      setPasswordData({
+                        ...passwordData,
+                        newPassword: e.target.value,
+                      })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Xác nhận mật khẩu mới
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordData({
+                        ...passwordData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-4">
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  disabled={passwordLoading}
+                >
+                  {passwordLoading ? "Đang xử lý..." : "Cập nhật mật khẩu"}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
       {activeTab === "hospital" && isAdminHospital && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Thông tin Cơ sở y tế</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">
+            Thông tin Cơ sở y tế
+          </h2>
           <form onSubmit={handleHospitalSubmit} className="space-y-6">
             <div className="flex items-center gap-6 mb-8 max-sm:flex-col max-sm:items-start">
               <div className="shrink-0 relative group">
                 <img
-                  src={hospitalData.logo_url || "https://placehold.co/150x150/e2e8f0/64748b?text=Logo"}
+                  src={
+                    hospitalData.logo_url ||
+                    "https://placehold.co/150x150/e2e8f0/64748b?text=Logo"
+                  }
                   alt="Logo"
                   className="w-24 h-24 rounded-2xl object-cover border-4 border-slate-50 shadow-sm"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => hospitalLogoRef.current?.click()}
                   className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
@@ -368,7 +463,9 @@ export default function Profile() {
                 </button>
               </div>
               <div className="flex-1 w-full">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Đường dẫn Logo</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Đường dẫn Logo
+                </label>
                 <input
                   type="text"
                   name="logo_url"
@@ -377,15 +474,20 @@ export default function Profile() {
                   placeholder="https://..."
                   className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                 />
-                <input 
-                  type="file" 
-                  ref={hospitalLogoRef} 
-                  onChange={handleHospitalLogoChange} 
-                  className="hidden" 
-                  accept="image/*" 
+                <input
+                  type="file"
+                  ref={hospitalLogoRef}
+                  onChange={handleHospitalLogoChange}
+                  className="hidden"
+                  accept="image/*"
                 />
                 <div className="mt-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => hospitalLogoRef.current?.click()}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => hospitalLogoRef.current?.click()}
+                  >
                     Tải logo lên (Cloudinary)
                   </Button>
                 </div>
@@ -394,7 +496,9 @@ export default function Profile() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Tên cơ sở y tế</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Tên cơ sở y tế
+                </label>
                 <input
                   type="text"
                   name="name"
@@ -404,9 +508,11 @@ export default function Profile() {
                   className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                 />
               </div>
-              
+
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Địa chỉ chi tiết</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Địa chỉ chi tiết
+                </label>
                 <input
                   type="text"
                   name="address"
@@ -418,7 +524,9 @@ export default function Profile() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Email liên hệ</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Email liên hệ
+                </label>
                 <input
                   type="email"
                   name="email"
@@ -429,7 +537,9 @@ export default function Profile() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Số điện thoại (Hotline)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Số điện thoại (Hotline)
+                </label>
                 <input
                   type="text"
                   name="phone"
@@ -441,18 +551,48 @@ export default function Profile() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Chuyên khoa chính</label>
-                <input
-                  type="text"
-                  name="main_specialty"
-                  value={hospitalData.main_specialty}
-                  onChange={handleHospitalChange}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                  placeholder="Đa khoa, Nhi khoa, v.v..."
-                />
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Chuyên khoa chính
+                </label>
+                <div className="w-full px-4 py-2 border border-slate-200 rounded-xl bg-white max-h-48 overflow-y-auto">
+                  {categories.length === 0 && (
+                    <span className="text-slate-400 text-sm">
+                      Đang tải chuyên khoa...
+                    </span>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((cat) => (
+                      <label
+                        key={cat.id}
+                        className="flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500"
+                          checked={hospitalData.categoryIds?.includes(cat.id)}
+                          onChange={(e) => {
+                            const currentIds = hospitalData.categoryIds || [];
+                            const newIds = e.target.checked
+                              ? [...currentIds, cat.id]
+                              : currentIds.filter((id) => id !== cat.id);
+                            setHospitalData({
+                              ...hospitalData,
+                              categoryIds: newIds,
+                            });
+                          }}
+                        />
+                        <span className="text-sm text-slate-700">
+                          {cat.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Phí cơ sở (VNĐ)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Phí cơ sở (VNĐ)
+                </label>
                 <input
                   type="number"
                   name="facility_fee"
@@ -463,7 +603,9 @@ export default function Profile() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Giới thiệu về cơ sở</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Giới thiệu về cơ sở
+                </label>
                 <textarea
                   name="description"
                   value={hospitalData.description}
@@ -475,7 +617,11 @@ export default function Profile() {
             </div>
 
             <div className="flex justify-end pt-4 border-t border-slate-100">
-              <Button type="submit" variant="primary" disabled={hospitalLoading}>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={hospitalLoading}
+              >
                 {hospitalLoading ? "Đang lưu..." : "Lưu thay đổi"}
               </Button>
             </div>
