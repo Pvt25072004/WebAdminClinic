@@ -42,6 +42,30 @@ export default function Profile() {
   const [hospitalLoading, setHospitalLoading] = useState(false);
   const hospitalLogoRef = useRef(null);
 
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.full_name || user.fullName || "",
+        phone: user.phone || "",
+        avatar_url: user.avatar_url || user.avatar || "",
+        address: user.address || "",
+        gender: user.gender || "",
+      });
+      if (user.hospital) {
+        setHospitalData({
+          name: user.hospital.name || "",
+          address: user.hospital.address || "",
+          phone: user.hospital.phone || "",
+          email: user.hospital.email || "",
+          description: user.hospital.description || "",
+          logo_url: user.hospital.logo_url || "",
+          facility_fee: user.hospital.facility_fee || 0,
+          main_specialty: user.hospital.main_specialty || "",
+        });
+      }
+    }
+  }, [user]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
