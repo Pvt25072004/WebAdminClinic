@@ -2,8 +2,11 @@ import { getAuthHeaders, handleResponse } from "./http";
 import { API_BASE_URL } from "../utils/constants";
 const SERVICE_PACKAGES_ENDPOINT = `${API_BASE_URL}/service-packages`;
 
-export const getAllServicePackages = async () => {
-  const response = await fetch(SERVICE_PACKAGES_ENDPOINT, {
+export const getAllServicePackages = async (hospitalId = null) => {
+  const url = hospitalId 
+    ? `${SERVICE_PACKAGES_ENDPOINT}?hospital_id=${hospitalId}` 
+    : SERVICE_PACKAGES_ENDPOINT;
+  const response = await fetch(url, {
     headers: {
       ...getAuthHeaders(),
     },

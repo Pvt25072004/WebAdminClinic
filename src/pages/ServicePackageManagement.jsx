@@ -60,7 +60,7 @@ export default function ServicePackageManagement() {
     try {
       setLoading(true);
       const [data, hospitalsData] = await Promise.all([
-        getAllServicePackages(),
+        getAllServicePackages(user?.hospital_id),
         getHospitals()
       ]);
       

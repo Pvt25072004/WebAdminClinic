@@ -20,6 +20,8 @@ export default function Profile() {
     avatar_url: user?.avatar_url || user?.avatar || "",
     address: user?.address || "",
     gender: user?.gender || "",
+    date_of_birth: user?.date_of_birth || user?.dateOfBirth || "",
+    id_card_number: user?.id_card_number || "",
   });
   const fileInputRef = useRef(null);
 
@@ -90,6 +92,8 @@ export default function Profile() {
         avatar_url: user.avatar_url || user.avatar || "",
         address: user.address || "",
         gender: user.gender || "",
+        date_of_birth: user.date_of_birth || user.dateOfBirth || "",
+        id_card_number: user.id_card_number || "",
       });
       if (user.hospital) {
         setHospitalData({
@@ -341,6 +345,32 @@ export default function Profile() {
                     type="text"
                     name="address"
                     value={formData.address}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Ngày sinh
+                  </label>
+                  <input
+                    type="date"
+                    name="date_of_birth"
+                    value={formData.date_of_birth ? formData.date_of_birth.substring(0, 10) : ""}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Số CCCD / CMND
+                  </label>
+                  <input
+                    type="text"
+                    name="id_card_number"
+                    value={formData.id_card_number}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                   />
