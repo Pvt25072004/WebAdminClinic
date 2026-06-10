@@ -334,8 +334,8 @@ export default function Home() {
     normalizedRole === "admin_hospital" ? hospitalStats : adminStats;
 
   return (
-    <div className="grid grid-cols-[3fr_1.2fr] gap-8 max-[1400px]:grid-cols-1">
-      <div className="grid gap-8">
+    <div className="grid grid-cols-[3fr_1.2fr] gap-8 max-[1400px]:grid-cols-1 w-full">
+      <div className="grid gap-8 min-w-0">
         <section className="mb-0 grid grid-cols-3 gap-6 max-xl:grid-cols-2 max-md:grid-cols-1">
           {statsToDisplay.map((card) => (
             <TransferCard key={card.title} {...card} />
@@ -366,7 +366,7 @@ export default function Home() {
         </section>
       </div>
 
-      <aside className="flex flex-col gap-8">
+      <aside className="flex flex-col gap-8 min-w-0">
         <SavingsCard
           timeOptions={["Daily", "Weekly", "Monthly", "Yearly"]}
           chartData={stats.revenueChart}
