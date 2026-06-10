@@ -70,7 +70,15 @@ export default function SchedulesManagement() {
       // Pass user's hospital_id if they are admin_hospital, else null
       const hospId = user?.role === 'admin_hospital' ? user?.hospital_id : null;
       const responseData = await getDoctors(hospId, 1, 100);
-      const actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
+      let actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
+      
+      if (user?.role === 'admin_hospital' && hospId) {
+        actualDoctors = actualDoctors.filter(d => 
+          d.hospital_id === hospId || 
+          (d.hospitals && d.hospitals.some(h => h.id === hospId))
+        );
+      }
+      
       setDoctors(actualDoctors);
     } catch (e) {
       console.error("Load doctors error:", e);

@@ -89,7 +89,15 @@ export default function DoctorManagement() {
       setLoadingDoctors(true);
       const currentHospitalId = user?.hospital_id || user?.hospital?.id;
       const responseData = await getDoctors(currentHospitalId, currentPage, limit);
-      const actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
+      let actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
+      
+      if (user?.role === 'admin_hospital' && currentHospitalId) {
+        actualDoctors = actualDoctors.filter(d => 
+          d.hospital_id === currentHospitalId || 
+          (d.hospitals && d.hospitals.some(h => h.id === currentHospitalId))
+        );
+      }
+      
       setDoctors(actualDoctors);
       if (responseData?.total) setTotalItems(responseData.total);
       if (responseData?.totalPages) setTotalPages(responseData.totalPages);

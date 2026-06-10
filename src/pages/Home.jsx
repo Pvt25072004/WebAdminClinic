@@ -243,11 +243,18 @@ export default function Home() {
             : Array.isArray(hospitals?.data)
               ? hospitals.data
               : [],
-          doctorsData: Array.isArray(doctors)
+          doctorsData: (Array.isArray(doctors)
             ? doctors
             : Array.isArray(doctors?.data)
               ? doctors.data
-              : [],
+              : []
+          ).filter((d) => {
+            if (normalizedRole !== "admin_hospital") return true;
+            return (
+              d.hospital_id === hospitalId ||
+              (d.hospitals && d.hospitals.some((h) => h.id === hospitalId))
+            );
+          }),
           recentItems,
           alerts,
           recentAppointments,
