@@ -15,7 +15,6 @@ export default function Login() {
     e.preventDefault();
     setError("");
 
-    // Validation khớp với BE: email hợp lệ và password tối thiểu 6 ký tự
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Email không đúng định dạng.");
       return;
