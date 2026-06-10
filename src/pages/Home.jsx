@@ -100,7 +100,7 @@ export default function Home() {
           : 0;
         const processedDoctors = (Array.isArray(doctors) ? doctors : Array.isArray(doctors?.data) ? doctors.data : []).filter((d) => {
           if (normalizedRole !== "admin_hospital") return true;
-          return d.hospital_id === hospitalId || (d.hospitals && d.hospitals.some((h) => h.id === hospitalId));
+          return Number(d.hospital_id) === Number(hospitalId) || (d.hospitals && d.hospitals.some((h) => Number(h.id) === Number(hospitalId)));
         });
 
         const totalAppointments = statsData?.totalAppointments || 0;

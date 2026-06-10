@@ -72,10 +72,11 @@ export default function SchedulesManagement() {
       const responseData = await getDoctors(hospId, 1, 100);
       let actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
       
-      if (user?.role === 'admin_hospital' && hospId) {
+      const normalizedRole = (user?.role || user?.userRole || user?.user_role || "patient").toLowerCase();
+      if (normalizedRole === 'admin_hospital' && hospId) {
         actualDoctors = actualDoctors.filter(d => 
-          d.hospital_id === hospId || 
-          (d.hospitals && d.hospitals.some(h => h.id === hospId))
+          Number(d.hospital_id) === Number(hospId) || 
+          (d.hospitals && d.hospitals.some(h => Number(h.id) === Number(hospId)))
         );
       }
       

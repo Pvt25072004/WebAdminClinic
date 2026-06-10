@@ -91,16 +91,23 @@ export default function DoctorManagement() {
       const responseData = await getDoctors(currentHospitalId, currentPage, limit);
       let actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
       
-      if (user?.role === 'admin_hospital' && currentHospitalId) {
+      const normalizedRole = (user?.role || user?.userRole || user?.user_role || "patient").toLowerCase();
+      if (normalizedRole === 'admin_hospital' && currentHospitalId) {
         actualDoctors = actualDoctors.filter(d => 
-          d.hospital_id === currentHospitalId || 
-          (d.hospitals && d.hospitals.some(h => h.id === currentHospitalId))
+          Number(d.hospital_id) === Number(currentHospitalId) || 
+          (d.hospitals && d.hospitals.some(h => Number(h.id) === Number(currentHospitalId)))
         );
       }
       
       setDoctors(actualDoctors);
-      if (responseData?.total) setTotalItems(responseData.total);
-      if (responseData?.totalPages) setTotalPages(responseData.totalPages);
+      
+      if (normalizedRole === 'admin_hospital') {
+        setTotalItems(actualDoctors.length);
+        setTotalPages(Math.ceil(actualDoctors.length / limit) || 1);
+      } else {
+        if (responseData?.total) setTotalItems(responseData.total);
+        if (responseData?.totalPages) setTotalPages(responseData.totalPages);
+      }
     } catch (e) {
       console.error("Load doctors error:", e);
     } finally {
