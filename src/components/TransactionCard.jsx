@@ -28,15 +28,19 @@ export default function TransactionCard({ title, items }) {
               onClick={() => item.onClick && item.onClick()}
               className={`group relative mb-5 flex items-center justify-between border-b border-[#e6e9f4] pb-[18px] transition duration-300 last:mb-0 last:border-b-0 last:pb-0 ${item.onClick ? 'cursor-pointer hover:translate-x-1' : ''}`}
             >
-              <div className={`flex h-[45px] w-[45px] items-center justify-center bg-[#e6e9f4] text-lg text-[#6c7380] transition duration-300 group-hover:scale-110 group-hover:bg-[#edf0fb] group-hover:text-emerald-500 ${item.isAvatar ? 'rounded-full overflow-hidden' : 'rounded-xl'}`}>
-                {item.image ? (
+              <div className={`flex h-[45px] w-[45px] items-center justify-center bg-[#e6e9f4] text-lg text-[#6c7380] transition duration-300 group-hover:scale-110 group-hover:bg-[#edf0fb] group-hover:text-emerald-500 relative ${item.isAvatar ? 'rounded-full overflow-hidden' : 'rounded-xl'}`}>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Icon />
+                </div>
+                {item.image && (
                   <img
                     src={item.image}
                     alt={item.title}
-                    className="h-full w-full object-cover"
+                    className="absolute inset-0 h-full w-full object-cover z-10"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
                   />
-                ) : (
-                  <Icon />
                 )}
               </div>
 

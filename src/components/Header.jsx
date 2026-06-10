@@ -89,6 +89,10 @@ export default function Header() {
                 }
                 alt={user?.full_name || "Admin"}
                 className="h-full w-full rounded-full border-2 border-white object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://i.pravatar.cc/100?img=8";
+                }}
               />
             </div>
           </button>
