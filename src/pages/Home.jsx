@@ -171,7 +171,9 @@ export default function Home() {
               amount: index === 0 ? "Mới nhất" : "",
               type: "positive",
               isAvatar: true,
-              image: u.avatar_url || `https://i.pravatar.cc/100?img=${(u.id % 70) + 1}`,
+              image:
+                u.avatar_url ||
+                `https://i.pravatar.cc/100?img=${(u.id % 70) + 1}`,
               Icon: FaUser,
             });
           });
@@ -354,10 +356,7 @@ export default function Home() {
             </>
           ) : (
             <>
-              <TransactionCard
-                title="Bệnh nhân mới (Hệ thống)"
-                items={stats.alerts}
-              />
+              <TransactionCard title="Bệnh nhân mới" items={stats.alerts} />
               <TransactionCard
                 title="Lịch hẹn mới nhất"
                 items={stats.recentAppointments}
