@@ -562,6 +562,23 @@ export default function AppointmentManagement() {
               </div>
             </div>
 
+            {/* Refund Details */}
+            {['requested', 'completed'].includes(selectedAppointment.refund_status) && (
+              <div className="mb-6">
+                <h4 className="font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-amber-500" /> Thông tin Hoàn tiền
+                </h4>
+                <div className="bg-amber-50/50 p-4 rounded-lg text-sm border border-amber-100">
+                  <div className="space-y-2">
+                    <p><span className="text-slate-500 w-32 inline-block">Số tiền hoàn:</span> <span className="font-bold text-amber-600">{Number(selectedAppointment.refund_amount || 0).toLocaleString("vi-VN")} VNĐ {selectedAppointment.refund_percentage ? `(${selectedAppointment.refund_percentage}%)` : ''}</span></p>
+                    <p><span className="text-slate-500 w-32 inline-block">Ngân hàng:</span> <span className="font-medium">{selectedAppointment.refund_bank_name || "N/A"}</span></p>
+                    <p><span className="text-slate-500 w-32 inline-block">Số tài khoản:</span> <span className="font-medium">{selectedAppointment.refund_bank_account || "N/A"}</span></p>
+                    <p><span className="text-slate-500 w-32 inline-block">Chủ tài khoản:</span> <span className="font-medium">{selectedAppointment.refund_account_name || "N/A"}</span></p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Medical Record Details */}
             {selectedAppointment.status === "completed" && (
               <div className="mb-6">
