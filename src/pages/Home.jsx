@@ -98,8 +98,13 @@ export default function Home() {
         const totalCategories = Array.isArray(categoriesRes)
           ? categoriesRes.length
           : 0;
+        const processedDoctors = (Array.isArray(doctors) ? doctors : Array.isArray(doctors?.data) ? doctors.data : []).filter((d) => {
+          if (normalizedRole !== "admin_hospital") return true;
+          return d.hospital_id === hospitalId || (d.hospitals && d.hospitals.some((h) => h.id === hospitalId));
+        });
+
         const totalAppointments = statsData?.totalAppointments || 0;
-        const totalDoctors = statsData?.totalDoctors || 0;
+        const totalDoctors = normalizedRole === "admin_hospital" ? processedDoctors.length : (statsData?.totalDoctors || 0);
         const totalRevenue = statsData?.totalRevenue || 0;
 
         let totalStars = 0;
@@ -243,18 +248,7 @@ export default function Home() {
             : Array.isArray(hospitals?.data)
               ? hospitals.data
               : [],
-          doctorsData: (Array.isArray(doctors)
-            ? doctors
-            : Array.isArray(doctors?.data)
-              ? doctors.data
-              : []
-          ).filter((d) => {
-            if (normalizedRole !== "admin_hospital") return true;
-            return (
-              d.hospital_id === hospitalId ||
-              (d.hospitals && d.hospitals.some((h) => h.id === hospitalId))
-            );
-          }),
+          doctorsData: processedDoctors,
           recentItems,
           alerts,
           recentAppointments,
