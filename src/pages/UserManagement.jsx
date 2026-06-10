@@ -588,13 +588,19 @@ export default function UserManagement() {
             
             <div className="p-6 overflow-y-auto">
               <div className="flex items-start gap-6 mb-8">
-                <div className="w-24 h-24 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
-                  {viewingUser.avatar_url ? (
-                    <img src={viewingUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300 text-3xl font-medium">
-                      {viewingUser.full_name?.charAt(0).toUpperCase()}
-                    </div>
+                <div className="w-24 h-24 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-3xl font-medium">
+                    {viewingUser.full_name?.charAt(0).toUpperCase()}
+                  </div>
+                  {viewingUser.avatar_url && (
+                    <img 
+                      src={viewingUser.avatar_url} 
+                      alt="Avatar" 
+                      className="absolute inset-0 w-full h-full object-cover z-10" 
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
                   )}
                 </div>
                 <div>

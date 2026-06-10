@@ -76,7 +76,7 @@ export default function Home() {
           reviewsRes,
         ] = await Promise.all([
           getHospitals().catch(() => []),
-          getUsers(1, 5).catch(() => []),
+          getUsers(1, 5, { role: "patient" }).catch(() => []),
           getDoctors(
             normalizedRole === "admin_hospital" ? hospitalId : null,
             1,
@@ -171,7 +171,7 @@ export default function Home() {
               amount: index === 0 ? "Mới nhất" : "",
               type: "positive",
               isAvatar: true,
-              image: u.avatar_url || "",
+              image: u.avatar_url || `https://i.pravatar.cc/100?img=${(u.id % 70) + 1}`,
               Icon: FaUser,
             });
           });
