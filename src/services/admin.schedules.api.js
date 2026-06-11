@@ -29,6 +29,24 @@ export const createSchedule = async (payload) => {
 };
 
 
+export const updateSchedule = async (id, payload) => {
+  const response = await fetch(`${SCHEDULES_ENDPOINT}/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Không thể cập nhật lịch biểu");
+  }
+  return await response.json();
+};
+
 export const updateScheduleStatus = async (id, isAvailable) => {
   const response = await fetch(`${SCHEDULES_ENDPOINT}/${id}/status`, {
     method: "PATCH",

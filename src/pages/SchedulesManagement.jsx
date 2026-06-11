@@ -3,14 +3,14 @@ import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import vi from "date-fns/locale/vi"; // Use Vietnamese locale
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { getAllSchedules, createSchedule, updateScheduleStatus, deleteSchedule } from "../services/admin.schedules.api";
+import { getAllSchedules, createSchedule, updateScheduleStatus, deleteSchedule, updateSchedule } from "../services/admin.schedules.api";
 import { getAppointmentsBySchedule } from "../services/admin.appointments.api";
 import { getDoctors } from "../services/admin.doctors.api";
 import { getRooms } from "../services/admin.rooms.api";
 import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotification } from "../contexts/NotificationContext";
-import { CalendarDays, Plus, X, Users, Clock, AlertCircle, Filter, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, X, Users, Clock, AlertCircle, Filter, Trash2, Sparkles, MapPin, Edit } from "lucide-react";
 
 // Setup the localizer by providing the date-fns functions
 const locales = {
@@ -54,6 +54,76 @@ export default function SchedulesManagement() {
   const [filterCategory, setFilterCategory] = useState("");
   const [searchDoctor, setSearchDoctor] = useState("");
 
+  const [smartSuggestions, setSmartSuggestions] = useState(null);
+
+  const handleFindSmartSlots = () => {
+    if (!formData.work_date) {
+      showError("Vui lòng chọn Ngày làm việc để tìm phòng!");
+      return;
+    }
+    const targetDate = formData.work_date;
+    let catId = filterCategory;
+    
+    // Tự động lấy chuyên khoa của bác sĩ nếu chưa chọn chuyên khoa
+    if (!catId && selectedDoctorIds.length === 1) {
+       const selectedDoc = doctors.find(d => d.id === selectedDoctorIds[0]);
+       if (selectedDoc?.category?.id) {
+          catId = selectedDoc.category.id;
+       }
+    }
+
+    // Lọc các phòng thuộc chuyên khoa (nếu có chọn)
+    let candidateRooms = rooms;
+    if (catId) {
+      candidateRooms = candidateRooms.filter(r => String(r.category?.id) === String(catId));
+    }
+
+    // Lọc các lịch trùng ngày
+    const schedulesOnDate = schedules.filter(s => {
+       // s.work_date có thể là '2026-06-11' hoặc '2026-06-11T00:00:00Z'
+       const sDate = s.work_date ? String(s.work_date).split('T')[0] : '';
+       return sDate === targetDate;
+    });
+
+    const suggestions = [];
+
+    candidateRooms.forEach(room => {
+       // Lấy lịch của phòng này trong ngày đó
+       const roomSchedules = schedulesOnDate.filter(s => String(s.room?.id) === String(room.id));
+       
+       let morningOccupied = false;
+       let afternoonOccupied = false;
+
+       roomSchedules.forEach(s => {
+          // s.start_time và s.end_time là dạng "07:00:00"
+          const startStr = String(s.start_time);
+          const endStr = String(s.end_time);
+          const startHr = parseInt(startStr.split(':')[0], 10);
+          const endHr = parseInt(endStr.split(':')[0], 10);
+          
+          if (startHr < 12) morningOccupied = true; // Chiếm buổi sáng
+          if (endHr > 12) afternoonOccupied = true; // Chiếm buổi chiều
+       });
+
+       if (!morningOccupied) {
+          suggestions.push({ room, shift: "morning", label: `Sáng (07:00-11:30) - ${room.name}` });
+       }
+       if (!afternoonOccupied) {
+          suggestions.push({ room, shift: "afternoon", label: `Chiều (13:00-17:00) - ${room.name}` });
+       }
+    });
+
+    setSmartSuggestions(suggestions);
+  };
+
+  const handleSelectSuggestion = (sug) => {
+    setFormData(prev => ({
+      ...prev,
+      room_id: sug.room.id,
+      start_time: sug.shift === "morning" ? "07:00:00" : "13:00:00",
+      end_time: sug.shift === "morning" ? "11:30:00" : "17:00:00"
+    }));
+  };
   // Filters cho View Lịch (Calendar)
   const [viewFilterCategory, setViewFilterCategory] = useState("");
   const [viewSearchDoctor, setViewSearchDoctor] = useState("");
@@ -64,6 +134,13 @@ export default function SchedulesManagement() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    room_id: "",
+    start_time: "",
+    end_time: "",
+    max_patients: ""
+  });
 
   // Day View Modal states
   const [isDayViewModalOpen, setIsDayViewModalOpen] = useState(false);
@@ -121,30 +198,33 @@ export default function SchedulesManagement() {
 
   useEffect(() => {
     const loadRooms = async () => {
-      // Chỉ tải danh sách phòng nếu chỉ chọn đúng 1 bác sĩ
-      if (selectedDoctorIds.length !== 1 || selectAll) {
-        setRooms([]);
-        return;
-      }
       try {
-        const selectedDoc = doctors.find(d => d.id === selectedDoctorIds[0]);
-        if (selectedDoc) {
-          const hospId = user?.role === 'admin_hospital' ? user?.hospital_id : (selectedDoc.hospitals?.[0]?.id || null);
-          const catId = selectedDoc.category?.id || null;
-          
-          if (hospId) {
-            const fetchedRooms = await getRooms(hospId, catId);
-            setRooms(Array.isArray(fetchedRooms) ? fetchedRooms : (fetchedRooms?.data || []));
-          } else {
-             setRooms([]);
-          }
+        let hospId = user?.role === 'admin_hospital' ? user?.hospital_id : null;
+        let catId = filterCategory || null;
+
+        if (selectedDoctorIds.length > 0) {
+           const selectedDoc = doctors.find(d => d.id === selectedDoctorIds[0]);
+           if (selectedDoc) {
+             if (!hospId) hospId = selectedDoc.hospitals?.[0]?.id || null;
+             // Tự lấy chuyên khoa của bác sĩ nếu chưa lọc
+             if (!catId && selectedDoctorIds.length === 1) {
+               catId = selectedDoc.category?.id || null;
+             }
+           }
+        }
+
+        if (hospId) {
+          const fetchedRooms = await getRooms(hospId, catId);
+          setRooms(Array.isArray(fetchedRooms) ? fetchedRooms : (fetchedRooms?.data || []));
+        } else {
+           setRooms([]);
         }
       } catch (e) {
         console.error("Load rooms error:", e);
       }
     };
     loadRooms();
-  }, [selectedDoctorIds, selectAll, doctors, user]);
+  }, [selectedDoctorIds, filterCategory, doctors, user]);
 
   const availableRooms = useMemo(() => {
     if (!formData.work_date || !formData.start_time || !formData.end_time) return rooms;
@@ -211,7 +291,12 @@ export default function SchedulesManagement() {
 
       const response = await createSchedule(payload);
       
-      if (response && response.message) {
+      if (response && response.success_count === 0) {
+        showError(`Không thể tạo lịch: ${response.failed?.[0]?.reason || 'Trùng lịch'}`);
+        return; // Dừng lại, không đóng Modal để user sửa
+      } else if (response && response.failed_count > 0) {
+        showWarning(`Tạo thành công ${response.success_count} ca. Thất bại ${response.failed_count} ca do trùng lịch.`);
+      } else if (response && response.message) {
         showSuccess(response.message);
       } else {
         showSuccess("Tạo lịch thành công!");
@@ -228,6 +313,7 @@ export default function SchedulesManagement() {
   const handleSelectEvent = async (event) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
+    setIsEditingSchedule(false);
     try {
       setLoadingAppointments(true);
       const data = await getAppointmentsBySchedule(event.id);
@@ -319,6 +405,39 @@ export default function SchedulesManagement() {
     }
   };
 
+  const handleEditScheduleClick = () => {
+     setEditFormData({
+        room_id: selectedEvent.resource.schedule.room_id || "",
+        start_time: selectedEvent.resource.schedule.start_time || "08:00:00",
+        end_time: selectedEvent.resource.schedule.end_time || "17:00:00",
+        max_patients: selectedEvent.resource.schedule.max_patients || 10
+     });
+     setIsEditingSchedule(true);
+  };
+
+  const handleSaveEditSchedule = async (e) => {
+    e.preventDefault();
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        start_time: editFormData.start_time,
+        end_time: editFormData.end_time,
+        max_patients: parseInt(editFormData.max_patients),
+        room_id: editFormData.room_id ? parseInt(editFormData.room_id) : null
+      };
+      
+      await updateSchedule(selectedEvent.id, payload);
+      showSuccess("Cập nhật lịch trực thành công!");
+      setIsEditingSchedule(false);
+      setIsDetailsModalOpen(false);
+      loadSchedules();
+    } catch(err) {
+      showError(err.message || "Lỗi cập nhật lịch trực");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const events = useMemo(() => {
     const filteredSchedules = schedules.filter(sch => {
       if (viewFilterCategory) {
@@ -361,12 +480,13 @@ export default function SchedulesManagement() {
 
       return {
         id: sch.id,
-        title: `BS. ${docName} (${sch.max_patients} bn)`,
+        title: `BS. ${docName} (${sch.room?.name || 'CX'} - ${sch.max_patients}bn)`,
         start: startDate,
         end: endDate,
         resource: {
           doctor: docName,
           hospital: hospName,
+          room: sch.room?.name || 'Chưa xếp phòng',
           max: sch.max_patients,
           is_available: sch.is_available,
           approval_status: sch.approval_status,
@@ -510,8 +630,8 @@ export default function SchedulesManagement() {
       {/* Modal Tạo Lịch */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50 shrink-0">
               <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
                 <CalendarDays className="w-5 h-5 text-blue-600" /> Tạo Lịch Trực Mới
               </h3>
@@ -523,9 +643,10 @@ export default function SchedulesManagement() {
               </button>
             </div>
             
-            <form onSubmit={handleCreateSchedule} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Cột trái: Chọn Bác sĩ */}
+            <form onSubmit={handleCreateSchedule} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 overflow-y-auto flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Cột trái: Chọn Bác sĩ */}
                 <div className="space-y-4">
                   <h4 className="font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
                     <Users className="w-4 h-4 text-indigo-500" /> Thông tin Bác sĩ
@@ -609,8 +730,68 @@ export default function SchedulesManagement() {
 
               {/* Cột phải: Thời gian & Địa điểm */}
               <div className="space-y-4">
-                <h4 className="font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-emerald-500" /> Thời gian & Địa điểm
+                
+                {/* Lọc lịch thông minh */}
+                {selectedDoctorIds.length > 1 || selectAll ? (
+                  <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex items-start gap-2 text-emerald-800 text-sm">
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <span>Tính năng Gợi ý Giờ Trống không khả dụng khi lên lịch cho nhiều bác sĩ cùng lúc.</span>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                    <h4 className="font-semibold text-emerald-800 flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4" /> Gợi ý Phòng & Giờ Trống
+                    </h4>
+                    <p className="text-xs text-emerald-600 mb-3">
+                      Chọn một ngày để hệ thống quét các phòng trống (Ca sáng: 07:00-11:30, Ca chiều: 13:00-17:00).
+                    </p>
+                    <div className="flex gap-2 mb-1">
+                      <input 
+                        type="date"
+                        value={formData.work_date}
+                        onChange={(e) => {
+                           setFormData({...formData, work_date: e.target.value});
+                           setSmartSuggestions(null); // reset
+                        }}
+                        className="flex-1 border border-emerald-200 rounded-lg px-3 py-2 outline-none focus:border-emerald-500 bg-white text-sm"
+                      />
+                      <button 
+                        type="button"
+                        onClick={handleFindSmartSlots}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors whitespace-nowrap"
+                      >
+                        Tìm kiếm
+                      </button>
+                    </div>
+                    
+                    {smartSuggestions && (
+                      <div className="mt-3 bg-white p-2 rounded-lg border border-emerald-100 max-h-40 overflow-y-auto">
+                         {smartSuggestions.length === 0 ? (
+                           <div className="text-center text-sm text-slate-500 p-2">Không còn phòng trống nào trong ngày này.</div>
+                         ) : (
+                           <div className="flex flex-wrap gap-2">
+                             {smartSuggestions.map((sug, idx) => (
+                               <button
+                                 key={idx}
+                                 type="button"
+                                 onClick={() => handleSelectSuggestion(sug)}
+                                 className={`px-3 py-1.5 border text-xs font-medium rounded-md transition-colors text-left
+                                   ${formData.room_id == sug.room.id && (formData.start_time.startsWith(sug.shift === "morning" ? "07" : "13")) 
+                                     ? 'bg-emerald-600 text-white border-emerald-600' 
+                                     : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300'}`}
+                               >
+                                 {sug.label}
+                               </button>
+                             ))}
+                           </div>
+                         )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <h4 className="font-semibold text-slate-700 border-b pb-2 flex items-center gap-2 mt-4">
+                  <Clock className="w-4 h-4 text-emerald-500" /> Tùy chỉnh Chi tiết Lịch
                 </h4>
                   {selectedDoctorIds.length === 1 && !selectAll && (
                     <div>
@@ -649,8 +830,13 @@ export default function SchedulesManagement() {
                         type="date"
                         required
                         value={formData.work_date}
-                        onChange={(e) => setFormData({...formData, work_date: e.target.value})}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        onChange={(e) => {
+                          setFormData({...formData, work_date: e.target.value});
+                          setSmartSuggestions(null);
+                        }}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50 text-slate-500"
+                        title="Thay đổi ngày ở phần Gợi ý phía trên"
+                        readOnly // Đã có ở trên nên chỉ hiện thị
                       />
                     </div>
                     <div>
@@ -702,8 +888,8 @@ export default function SchedulesManagement() {
                   </div>
                 </div>
               </div>
-
-              <div className="pt-6 mt-6 border-t border-slate-100 flex gap-4 justify-end">
+            </div>
+              <div className="p-5 border-t border-slate-100 bg-white flex gap-4 justify-end shrink-0">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -740,25 +926,34 @@ export default function SchedulesManagement() {
             </div>
             
             <div className="p-5 flex-1 overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                  <div className="flex items-center gap-2 text-blue-800 mb-1">
-                    <Users className="w-4 h-4" />
-                    <span className="font-medium">Bác sĩ phụ trách</span>
+              {!isEditingSchedule ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                      <div className="flex items-center gap-2 text-blue-800 mb-1">
+                        <Users className="w-4 h-4" />
+                        <span className="font-medium">Bác sĩ phụ trách</span>
+                      </div>
+                      <p className="text-slate-700 font-semibold">{selectedEvent.resource.doctor}</p>
+                    </div>
+                    <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                      <div className="flex items-center gap-2 text-emerald-800 mb-1">
+                        <Clock className="w-4 h-4" />
+                        <span className="font-medium">Thời gian</span>
+                      </div>
+                      <p className="text-slate-700 font-semibold">
+                        {format(selectedEvent.start, 'HH:mm')} - {format(selectedEvent.end, 'HH:mm')}
+                      </p>
+                      <p className="text-sm text-slate-500">{format(selectedEvent.start, 'dd/MM/yyyy')}</p>
+                    </div>
+                    <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
+                      <div className="flex items-center gap-2 text-purple-800 mb-1">
+                        <MapPin className="w-4 h-4" />
+                        <span className="font-medium">Phòng Khám</span>
+                      </div>
+                      <p className="text-slate-700 font-semibold">{selectedEvent.resource.room}</p>
+                    </div>
                   </div>
-                  <p className="text-slate-700 font-semibold">{selectedEvent.resource.doctor}</p>
-                </div>
-                <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-                  <div className="flex items-center gap-2 text-emerald-800 mb-1">
-                    <Clock className="w-4 h-4" />
-                    <span className="font-medium">Thời gian</span>
-                  </div>
-                  <p className="text-slate-700 font-semibold">
-                    {format(selectedEvent.start, 'HH:mm')} - {format(selectedEvent.end, 'HH:mm')}
-                  </p>
-                  <p className="text-sm text-slate-500">{format(selectedEvent.start, 'dd/MM/yyyy')}</p>
-                </div>
-              </div>
 
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-bold text-slate-800 flex items-center gap-2">
@@ -782,6 +977,13 @@ export default function SchedulesManagement() {
                     }`}
                   >
                     {selectedEvent.resource.is_available ? 'Khóa ca trực' : 'Mở ca trực'}
+                  </button>
+                  <button 
+                    onClick={handleEditScheduleClick}
+                    className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition border border-blue-200"
+                    title="Chỉnh sửa ca trực"
+                  >
+                    <Edit className="w-5 h-5" />
                   </button>
                   <button 
                     onClick={handleDeleteSchedule}
@@ -844,6 +1046,82 @@ export default function SchedulesManagement() {
                   </tbody>
                 </table>
               </div>
+              </>
+              ) : (
+                <form id="edit-schedule-form" onSubmit={handleSaveEditSchedule} className="space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <p className="text-sm text-slate-500 mb-4">Đang chỉnh sửa ca trực ngày: <span className="font-semibold text-slate-800">{format(selectedEvent.start, 'dd/MM/yyyy')}</span> - Bác sĩ: <span className="font-semibold text-slate-800">{selectedEvent.resource.doctor}</span></p>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Giờ bắt đầu</label>
+                        <input 
+                          type="time" required step="2"
+                          value={editFormData.start_time}
+                          onChange={(e) => setEditFormData({...editFormData, start_time: e.target.value})}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Giờ kết thúc</label>
+                        <input 
+                          type="time" required step="2"
+                          value={editFormData.end_time}
+                          onChange={(e) => setEditFormData({...editFormData, end_time: e.target.value})}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Phòng Khám</label>
+                        <select 
+                          value={editFormData.room_id}
+                          onChange={(e) => setEditFormData({...editFormData, room_id: e.target.value})}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                        >
+                          <option value="">-- Để trống --</option>
+                          {rooms.map(room => (
+                            <option key={room.id} value={room.id}>{room.name} {room.category?.name ? `(${room.category.name})` : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Bệnh nhân tối đa</label>
+                        <input 
+                          type="number" min="1" required
+                          value={editFormData.max_patients}
+                          onChange={(e) => setEditFormData({...editFormData, max_patients: e.target.value})}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-4 justify-end shrink-0">
+              {isEditingSchedule && (
+                 <>
+                   <button 
+                     type="button"
+                     onClick={() => setIsEditingSchedule(false)}
+                     className="px-6 py-2 border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-white transition-colors"
+                   >
+                     Hủy sửa
+                   </button>
+                   <button 
+                     type="submit"
+                     form="edit-schedule-form"
+                     disabled={isSubmitting}
+                     className="px-6 py-2 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                   >
+                     {isSubmitting ? "Đang lưu..." : "Lưu Thay Đổi"}
+                   </button>
+                 </>
+              )}
             </div>
           </div>
         </div>
