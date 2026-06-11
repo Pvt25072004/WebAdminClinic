@@ -3,10 +3,12 @@ import { getRooms, createBulkRooms, updateRoom, deleteRoom } from "../services/a
 import { getHospitals } from "../services/admin.hospitals.api";
 import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
+import { useNotification } from "../contexts/NotificationContext";
 import { Building, Plus, Layers, Stethoscope, Hash, ListFilter, Edit, Trash2, X } from "lucide-react";
 
 export default function RoomManagement() {
   const { user } = useAuth();
+  const { confirm, showSuccess, showError } = useNotification();
   
   const [rooms, setRooms] = useState([]);
   const [hospitals, setHospitals] = useState([]);
@@ -93,7 +95,7 @@ export default function RoomManagement() {
   const handleBulkCreate = async (e) => {
     e.preventDefault();
     if (!formData.hospital_id || !formData.category_id) {
-      alert("Vui lòng điền Bệnh viện và Chuyên khoa");
+      showError("Vui lòng điền Bệnh viện và Chuyên khoa");
       return;
     }
 
@@ -102,12 +104,12 @@ export default function RoomManagement() {
 
     if (creationMode === "auto") {
       if (!formData.floor || !formData.roomCount) {
-        alert("Vui lòng điền Tầng và Số lượng");
+        showError("Vui lòng điền Tầng và Số lượng");
         return;
       }
       const count = parseInt(formData.roomCount);
       if (isNaN(count) || count <= 0 || count > 100) {
-        alert("Số lượng phòng phải từ 1 đến 100");
+        showError("Số lượng phòng phải từ 1 đến 100");
         return;
       }
 
@@ -144,7 +146,7 @@ export default function RoomManagement() {
       message = `Bạn sắp tạo ${count} phòng (từ T${floor}${String(maxNum + 1).padStart(2, '0')} đến T${floor}${String(maxNum + count).padStart(2, "0")}). Xác nhận?`;
     } else {
       if (!formData.manualRoomName.trim()) {
-        alert("Vui lòng nhập tên phòng");
+        showError("Vui lòng nhập tên phòng");
         return;
       }
       newRooms.push({
@@ -155,18 +157,19 @@ export default function RoomManagement() {
       message = `Bạn sắp tạo phòng khám: ${formData.manualRoomName}. Xác nhận?`;
     }
 
-    if (!window.confirm(message)) {
+    const isConfirm = await confirm("Xác nhận tạo phòng", message);
+    if (!isConfirm) {
       return;
     }
 
     setSubmitLoading(true);
     try {
       await createBulkRooms(newRooms);
-      alert("Tạo phòng thành công!");
+      showSuccess("Tạo phòng thành công!");
       if (creationMode === "manual") setFormData(prev => ({...prev, manualRoomName: ""}));
       loadRooms();
     } catch (error) {
-      alert(error.message || "Lỗi khi tạo phòng");
+      showError(error.message || "Lỗi khi tạo phòng");
     } finally {
       setSubmitLoading(false);
     }
@@ -184,7 +187,7 @@ export default function RoomManagement() {
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     if (!editFormData.name.trim()) {
-      alert("Tên phòng không được để trống!");
+      showError("Tên phòng không được để trống!");
       return;
     }
     setEditLoading(true);
@@ -194,24 +197,30 @@ export default function RoomManagement() {
       if (payload.category_id) payload.category_id = parseInt(payload.category_id);
       
       await updateRoom(editingRoom.id, payload);
-      alert("Cập nhật phòng thành công!");
+      showSuccess("Cập nhật phòng thành công!");
       setEditingRoom(null);
       loadRooms();
     } catch (error) {
-      alert(error.message || "Lỗi khi cập nhật phòng");
+      showError(error.message || "Lỗi khi cập nhật phòng");
     } finally {
       setEditLoading(false);
     }
   };
 
   const handleDeleteRoom = async (id, name) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa phòng [${name}]? Hành động này không thể hoàn tác.`)) return;
+    const isConfirm = await confirm(
+      "Xác nhận xóa phòng",
+      `Bạn có chắc chắn muốn xóa phòng [${name}]? Hành động này không thể hoàn tác.`,
+      { variant: "danger", confirmText: "Xóa" }
+    );
+    if (!isConfirm) return;
+    
     try {
       await deleteRoom(id);
-      alert("Đã xóa phòng thành công!");
+      showSuccess("Đã xóa phòng thành công!");
       loadRooms();
     } catch (error) {
-      alert(error.message || "Lỗi khi xóa phòng");
+      showError(error.message || "Lỗi khi xóa phòng");
     }
   };
 

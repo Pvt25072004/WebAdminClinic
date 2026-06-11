@@ -20,7 +20,7 @@ export const createNotification = async (payload) => {
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || "Không thể gửi thông báo");
@@ -38,7 +38,7 @@ export const updateSystemNotification = async (id, payload) => {
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || "Không thể cập nhật thông báo");

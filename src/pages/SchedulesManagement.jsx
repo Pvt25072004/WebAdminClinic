@@ -27,7 +27,7 @@ const localizer = dateFnsLocalizer({
 
 export default function SchedulesManagement() {
   const { user } = useAuth();
-  const { showSuccess, showError, showWarning } = useNotification();
+  const { showSuccess, showError, showWarning, confirm } = useNotification();
   const [schedules, setSchedules] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -64,6 +64,11 @@ export default function SchedulesManagement() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+
+  // Day View Modal states
+  const [isDayViewModalOpen, setIsDayViewModalOpen] = useState(false);
+  const [selectedDayEvents, setSelectedDayEvents] = useState([]);
+  const [selectedDayDate, setSelectedDayDate] = useState(null);
 
   const loadSchedules = async () => {
     try {
@@ -234,6 +239,36 @@ export default function SchedulesManagement() {
     }
   };
 
+  const handleSelectSlot = ({ start }) => {
+    // Tìm tất cả các sự kiện trong ngày này
+    const dayEvents = events.filter(e => 
+      e.start.getDate() === start.getDate() && 
+      e.start.getMonth() === start.getMonth() && 
+      e.start.getFullYear() === start.getFullYear()
+    );
+    
+    setSelectedDayDate(start);
+    setSelectedDayEvents(dayEvents);
+    setIsDayViewModalOpen(true);
+  };
+
+  const handleShowMore = (events, date) => {
+    setSelectedDayDate(date);
+    setSelectedDayEvents(events);
+    setIsDayViewModalOpen(true);
+  };
+
+  const handleDrillDown = (date, view) => {
+    const dayEvents = events.filter(e => 
+      e.start.getDate() === date.getDate() && 
+      e.start.getMonth() === date.getMonth() && 
+      e.start.getFullYear() === date.getFullYear()
+    );
+    setSelectedDayDate(date);
+    setSelectedDayEvents(dayEvents);
+    setIsDayViewModalOpen(true);
+  };
+
   const toggleScheduleStatus = async () => {
     if (!selectedEvent) return;
     try {
@@ -259,7 +294,13 @@ export default function SchedulesManagement() {
   };
 
   const handleDeleteSchedule = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa ca trực này? Tất cả các lịch hẹn trong ca này có thể bị ảnh hưởng!")) {
+    const isConfirm = await confirm(
+      "Xác nhận xóa ca trực",
+      "Bạn có chắc chắn muốn xóa ca trực này? Tất cả các lịch hẹn trong ca này có thể bị ảnh hưởng!",
+      { variant: "danger", confirmText: "Xóa ca trực" }
+    );
+    
+    if (!isConfirm) {
       return;
     }
     
@@ -422,40 +463,47 @@ export default function SchedulesManagement() {
           </select>
         </div>
 
-        <div className="flex-1">
-          {loading ? (
-          <div className="w-full h-full flex items-center justify-center text-slate-500">
-            Đang tải dữ liệu lịch biểu...
+        <div className="flex-1 overflow-x-auto pb-2">
+          {/* Cố định chiều cao để ép react-big-calendar hiện nút "+ Xem thêm" */}
+          <div className="min-w-[900px] h-[650px]">
+            {loading ? (
+            <div className="w-full h-full flex items-center justify-center text-slate-500">
+              Đang tải dữ liệu lịch biểu...
+            </div>
+          ) : (
+            <Calendar
+              localizer={localizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: "100%" }}
+              culture="vi"
+              view={view}
+              onView={setView}
+              date={date}
+              onNavigate={setDate}
+              eventPropGetter={eventStyleGetter}
+              selectable={true}
+              onSelectSlot={handleSelectSlot}
+              popup={false} // Disable default popup
+              onShowMore={handleShowMore}
+              onDrillDown={handleDrillDown}
+              messages={{
+                next: "Tiếp",
+                previous: "Trước",
+                today: "Hôm nay",
+                month: "Tháng",
+                week: "Tuần",
+                day: "Ngày",
+                agenda: "Lịch trình",
+                showMore: (total) => `+ Xem thêm ${total}`,
+                noEventsInRange: "Không có lịch trực nào trong khoảng thời gian này.",
+              }}
+              tooltipAccessor={(e) => `Bác sĩ: ${e.resource.doctor}\nBệnh viện: ${e.resource.hospital}\nTối đa: ${e.resource.max} bệnh nhân`}
+              onSelectEvent={handleSelectEvent}
+            />
+          )}
           </div>
-        ) : (
-          <Calendar
-            localizer={localizer}
-            events={events}
-            startAccessor="start"
-            endAccessor="end"
-            style={{ height: "100%" }}
-            culture="vi"
-            view={view}
-            onView={setView}
-            date={date}
-            onNavigate={setDate}
-            eventPropGetter={eventStyleGetter}
-            popup={true}
-            messages={{
-              next: "Tiếp",
-              previous: "Trước",
-              today: "Hôm nay",
-              month: "Tháng",
-              week: "Tuần",
-              day: "Ngày",
-              agenda: "Lịch trình",
-              showMore: (total) => `+ Xem thêm ${total}`,
-              noEventsInRange: "Không có lịch trực nào trong khoảng thời gian này.",
-            }}
-            tooltipAccessor={(e) => `Bác sĩ: ${e.resource.doctor}\nBệnh viện: ${e.resource.hospital}\nTối đa: ${e.resource.max} bệnh nhân`}
-            onSelectEvent={handleSelectEvent}
-          />
-        )}
         </div>
       </div>
 
@@ -796,6 +844,96 @@ export default function SchedulesManagement() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Xem chi tiết danh sách bác sĩ trong ngày */}
+      {isDayViewModalOpen && selectedDayDate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-indigo-600" /> 
+                Ca trực ngày {format(selectedDayDate, 'dd/MM/yyyy')}
+              </h3>
+              <button 
+                onClick={() => setIsDayViewModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5 flex-1 overflow-y-auto space-y-3 bg-slate-50">
+              {selectedDayEvents.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-xl border border-dashed border-slate-200">
+                  <p className="text-slate-500 mb-4">Không có ca trực nào trong ngày này.</p>
+                  <button 
+                    onClick={() => {
+                      setIsDayViewModalOpen(false);
+                      setFormData(prev => ({...prev, work_date: format(selectedDayDate, 'yyyy-MM-dd')}));
+                      setIsModalOpen(true);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-colors"
+                  >
+                    + Tạo lịch mới
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-end mb-2">
+                    <button 
+                      onClick={() => {
+                        setIsDayViewModalOpen(false);
+                        setFormData(prev => ({...prev, work_date: format(selectedDayDate, 'yyyy-MM-dd')}));
+                        setIsModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      + Thêm lịch
+                    </button>
+                  </div>
+                  {selectedDayEvents.map(event => (
+                    <div 
+                      key={event.id} 
+                      onClick={() => {
+                        setIsDayViewModalOpen(false);
+                        handleSelectEvent(event);
+                      }}
+                      className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                          {event.resource.doctor.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors">
+                            {event.title}
+                          </div>
+                          <div className="text-sm text-slate-500 flex items-center gap-2 mt-1">
+                            <Clock className="w-3.5 h-3.5" /> 
+                            {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+                            <span className="text-slate-300">|</span>
+                            <span>{event.resource.hospital}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${
+                          event.resource.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {event.resource.is_available ? 'Đang mở' : 'Đã đóng'}
+                        </span>
+                        <div className="text-slate-300 group-hover:text-blue-500 transition-colors">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </div>

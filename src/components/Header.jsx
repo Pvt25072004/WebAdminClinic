@@ -64,7 +64,7 @@ export default function Header() {
         </label>
 
         <div className="flex items-center gap-4 border-l border-slate-200 pl-5">
-          <button 
+          <button
             className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-500 border border-slate-200/50 shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:text-emerald-500 hover:border-emerald-200 hover:shadow-[0_8px_20px_rgba(16,185,129,0.15)] group"
             onClick={() => navigate(normalizedRole === "admin" ? "/hospital-registrations" : "/doctor-requests")}
           >
