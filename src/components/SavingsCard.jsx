@@ -49,7 +49,7 @@ export default function SavingsCard({ timeOptions, paymentsData = [], chartData 
     return total;
   }, [paymentsData, activeTime]);
 
-  const formattedTotal = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(calculatedTotal);
+  const formattedTotal = new Intl.NumberFormat('vi-VN').format(calculatedTotal);
 
   return (
     <section className="rounded-[18px] bg-white p-8 shadow-sm border border-slate-100">
@@ -57,8 +57,11 @@ export default function SavingsCard({ timeOptions, paymentsData = [], chartData 
         Doanh thu ({activeTime})
       </h3>
 
-      <div className="relative mb-6 inline-block bg-gradient-to-br from-emerald-500 to-[#6a85f1] bg-clip-text text-[40px] font-extrabold text-transparent max-md:text-[32px]">
-        {formattedTotal}
+      <div className="relative mb-6 flex items-baseline gap-2">
+        <div className="inline-block bg-gradient-to-br from-emerald-500 to-[#6a85f1] bg-clip-text text-[40px] font-extrabold text-transparent max-md:text-[32px]">
+          {formattedTotal}
+        </div>
+        <span className="text-2xl font-bold text-slate-400">VNĐ</span>
       </div>
 
       <div className="mb-6 flex overflow-x-auto rounded-full bg-[#f5f7ff] p-1">
@@ -81,7 +84,7 @@ export default function SavingsCard({ timeOptions, paymentsData = [], chartData 
       <div className="-mx-4 h-[240px] mt-4">
         {chartData && chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
               <defs>
                 <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.6} />
