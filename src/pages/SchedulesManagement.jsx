@@ -10,7 +10,7 @@ import { getRooms } from "../services/admin.rooms.api";
 import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotification } from "../contexts/NotificationContext";
-import { CalendarDays, Plus, X, Users, Clock, AlertCircle } from "lucide-react";
+import { CalendarDays, Plus, X, Users, Clock, AlertCircle, Filter } from "lucide-react";
 
 // Setup the localizer by providing the date-fns functions
 const locales = {
@@ -53,6 +53,11 @@ export default function SchedulesManagement() {
 
   const [filterCategory, setFilterCategory] = useState("");
   const [searchDoctor, setSearchDoctor] = useState("");
+
+  // Filters cho View Lịch (Calendar)
+  const [viewFilterCategory, setViewFilterCategory] = useState("");
+  const [viewSearchDoctor, setViewSearchDoctor] = useState("");
+  const [viewStatus, setViewStatus] = useState("all");
 
   // Details Modal states
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -111,7 +116,8 @@ export default function SchedulesManagement() {
 
   useEffect(() => {
     const loadRooms = async () => {
-      if (selectedDoctorIds.length === 0) {
+      // Chỉ tải danh sách phòng nếu chỉ chọn đúng 1 bác sĩ
+      if (selectedDoctorIds.length !== 1 || selectAll) {
         setRooms([]);
         return;
       }
@@ -133,7 +139,21 @@ export default function SchedulesManagement() {
       }
     };
     loadRooms();
-  }, [formData.doctor_id, doctors, user]);
+  }, [selectedDoctorIds, selectAll, doctors, user]);
+
+  const availableRooms = useMemo(() => {
+    if (!formData.work_date || !formData.start_time || !formData.end_time) return rooms;
+    
+    return rooms.filter(room => {
+      const isOccupied = schedules.some(sch => {
+        if (sch.room?.id !== room.id && sch.room_id !== room.id) return false;
+        if (sch.work_date !== formData.work_date) return false;
+        // Check time overlap
+        return (sch.start_time < formData.end_time) && (sch.end_time > formData.start_time);
+      });
+      return !isOccupied;
+    });
+  }, [rooms, schedules, formData.work_date, formData.start_time, formData.end_time]);
 
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
@@ -228,7 +248,24 @@ export default function SchedulesManagement() {
   };
 
   const events = useMemo(() => {
-    return schedules.map((sch) => {
+    const filteredSchedules = schedules.filter(sch => {
+      if (viewFilterCategory) {
+        const catId = sch.doctor?.category?.id || sch.doctor?.category_id;
+        if (String(catId) !== String(viewFilterCategory)) return false;
+      }
+      if (viewSearchDoctor) {
+        const docName = sch.doctor?.user?.full_name || `ID: ${sch.doctor?.id}`;
+        if (!docName.toLowerCase().includes(viewSearchDoctor.toLowerCase())) return false;
+      }
+      if (viewStatus !== "all") {
+        if (viewStatus === "open" && (!sch.is_available || sch.approval_status !== "approved")) return false;
+        if (viewStatus === "closed" && (sch.is_available && sch.approval_status === "approved")) return false;
+        if (viewStatus === "pending" && sch.approval_status !== "pending") return false;
+      }
+      return true;
+    });
+
+    return filteredSchedules.map((sch) => {
       // sch.work_date: "2024-05-30"
       // sch.start_time: "08:00:00"
       // sch.end_time: "12:00:00"
@@ -314,8 +351,46 @@ export default function SchedulesManagement() {
         </button>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex-1">
-        {loading ? (
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex-1 flex flex-col">
+        {/* Bộ lọc xem lịch */}
+        <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="flex items-center gap-2 text-slate-600 font-medium mr-2">
+            <Filter className="w-4 h-4" /> Lọc Lịch:
+          </div>
+          
+          <select
+            value={viewFilterCategory}
+            onChange={(e) => setViewFilterCategory(e.target.value)}
+            className="border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 bg-white"
+          >
+            <option value="">-- Tất cả chuyên khoa --</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            placeholder="Tìm theo tên bác sĩ..."
+            value={viewSearchDoctor}
+            onChange={(e) => setViewSearchDoctor(e.target.value)}
+            className="border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 bg-white min-w-[200px]"
+          />
+
+          <select
+            value={viewStatus}
+            onChange={(e) => setViewStatus(e.target.value)}
+            className="border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 bg-white"
+          >
+            <option value="all">-- Tất cả trạng thái --</option>
+            <option value="open">Đang mở (Nhận khách)</option>
+            <option value="closed">Đã đóng / Tạm ngưng</option>
+            <option value="pending">Chờ duyệt</option>
+          </select>
+        </div>
+
+        <div className="flex-1">
+          {loading ? (
           <div className="w-full h-full flex items-center justify-center text-slate-500">
             Đang tải dữ liệu lịch biểu...
           </div>
@@ -346,6 +421,7 @@ export default function SchedulesManagement() {
             onSelectEvent={handleSelectEvent}
           />
         )}
+        </div>
       </div>
 
       {/* Modal Tạo Lịch */}
@@ -453,21 +529,33 @@ export default function SchedulesManagement() {
                 <h4 className="font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-emerald-500" /> Thời gian & Địa điểm
                 </h4>
-                  {selectedDoctorIds.length > 0 && rooms.length > 0 && (
+                  {selectedDoctorIds.length === 1 && !selectAll && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Chọn Phòng Khám</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center justify-between">
+                        <span>Chọn Phòng Khám</span>
+                        {formData.work_date && <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Lọc thông minh: Chỉ hiện phòng trống</span>}
+                      </label>
                       <select 
                         value={formData.room_id}
                         onChange={(e) => setFormData({...formData, room_id: e.target.value})}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       >
-                        <option value="">-- Dùng chung phòng cho các bác sĩ đã chọn (tùy chọn) --</option>
-                        {rooms.map(room => (
+                        <option value="">-- Có thể để trống --</option>
+                        {availableRooms.map(room => (
                           <option key={room.id} value={room.id}>
                             {room.name} {room.category?.name ? `(${room.category.name})` : ''}
                           </option>
                         ))}
                       </select>
+                      {rooms.length > 0 && availableRooms.length === 0 && formData.work_date && (
+                        <p className="text-xs text-red-500 mt-1">Không có phòng nào trống trong khoảng thời gian này!</p>
+                      )}
+                    </div>
+                  )}
+
+                  {(selectedDoctorIds.length > 1 || selectAll) && (
+                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2 text-sm text-amber-800">
+                      <span className="font-semibold flex items-center gap-1"><AlertCircle className="w-4 h-4"/> Lưu ý:</span> Bạn đang lên lịch cho nhiều bác sĩ cùng lúc. Phân bổ phòng khám tạm thời được để trống để tránh trùng phòng. Admin có thể xếp phòng chi tiết sau.
                     </div>
                   )}
 
