@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import Button from "../components/Button";
 import { getAllAppointments, updateAppointmentStatus, getMedicalRecord, updateAppointment } from "../services/admin.appointments.api";
 import { useNotification } from "../contexts/NotificationContext";
-import { CheckCircle, XCircle, Eye, Calendar, Clock, FileText, Check, X, DollarSign } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Calendar, Clock, FileText, Check, X, DollarSign, MapPin } from "lucide-react";
 import { formatDate } from "../utils/helpers";
 import Pagination from "../components/Pagination";
 
@@ -433,8 +433,15 @@ export default function AppointmentManagement() {
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> {apt.appointment_date ? formatDate(apt.appointment_date) : "N/A"}
                     </div>
-                    <div className="flex items-center gap-1 mt-1 text-xs">
-                      <Clock className="w-3 h-3" /> {apt.appointment_time || "N/A"}
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {apt.appointment_time || "N/A"}
+                      </span>
+                      {apt.schedule?.room?.name && (
+                        <span className="flex items-center gap-1 text-purple-600 font-bold bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">
+                          <MapPin className="w-3 h-3" /> P.{apt.schedule.room.name}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="py-3 px-2 text-slate-500">
