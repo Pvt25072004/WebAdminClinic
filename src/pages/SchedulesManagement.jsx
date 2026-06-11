@@ -3,14 +3,14 @@ import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import vi from "date-fns/locale/vi"; // Use Vietnamese locale
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { getAllSchedules, createSchedule, updateScheduleStatus } from "../services/admin.schedules.api";
+import { getAllSchedules, createSchedule, updateScheduleStatus, deleteSchedule } from "../services/admin.schedules.api";
 import { getAppointmentsBySchedule } from "../services/admin.appointments.api";
 import { getDoctors } from "../services/admin.doctors.api";
 import { getRooms } from "../services/admin.rooms.api";
 import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotification } from "../contexts/NotificationContext";
-import { CalendarDays, Plus, X, Users, Clock, AlertCircle, Filter } from "lucide-react";
+import { CalendarDays, Plus, X, Users, Clock, AlertCircle, Filter, Trash2 } from "lucide-react";
 
 // Setup the localizer by providing the date-fns functions
 const locales = {
@@ -237,13 +237,44 @@ export default function SchedulesManagement() {
   const toggleScheduleStatus = async () => {
     if (!selectedEvent) return;
     try {
-      const newStatus = !selectedEvent.resource.is_available;
+      const currentStatus = selectedEvent.resource.is_available;
+      const newStatus = !currentStatus;
       await updateScheduleStatus(selectedEvent.id, newStatus);
-      showSuccess(`Đã ${newStatus ? 'mở' : 'đóng'} lịch thành công!`);
-      setIsDetailsModalOpen(false);
+      
+      const updatedEvent = {
+        ...selectedEvent,
+        resource: {
+          ...selectedEvent.resource,
+          is_available: newStatus
+        }
+      };
+      setSelectedEvent(updatedEvent);
+      
+      showSuccess(`Đã ${newStatus ? 'mở' : 'khóa'} ca trực thành công!`);
       loadSchedules();
     } catch (error) {
-      showError(error.message || "Không thể cập nhật trạng thái lịch");
+      console.error(error);
+      showError(error.message || "Không thể cập nhật trạng thái");
+    }
+  };
+
+  const handleDeleteSchedule = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa ca trực này? Tất cả các lịch hẹn trong ca này có thể bị ảnh hưởng!")) {
+      return;
+    }
+    
+    try {
+      await deleteSchedule(selectedEvent.id);
+      
+      // Update local state
+      setSchedules(prev => prev.filter(s => s.id !== selectedEvent.id));
+      setIsDetailsModalOpen(false);
+      setSelectedEvent(null);
+      
+      showSuccess("Đã xóa ca trực thành công!");
+    } catch (error) {
+      console.error(error);
+      showError(error.message || "Không thể xóa lịch trực");
     }
   };
 
@@ -320,12 +351,14 @@ export default function SchedulesManagement() {
       style: {
         backgroundColor,
         borderRadius: "6px",
-        opacity: 0.9,
+        opacity: 0.95,
         color: "white",
         border: "0px",
         display: "block",
-        fontSize: "12px",
-        padding: "2px 4px",
+        fontSize: "13px",
+        padding: "4px 8px",
+        fontWeight: "500",
+        minHeight: "28px"
       }
     };
   };
@@ -407,6 +440,7 @@ export default function SchedulesManagement() {
             date={date}
             onNavigate={setDate}
             eventPropGetter={eventStyleGetter}
+            popup={true}
             messages={{
               next: "Tiếp",
               previous: "Trước",
@@ -415,6 +449,7 @@ export default function SchedulesManagement() {
               week: "Tuần",
               day: "Ngày",
               agenda: "Lịch trình",
+              showMore: (total) => `+ Xem thêm ${total}`,
               noEventsInRange: "Không có lịch trực nào trong khoảng thời gian này.",
             }}
             tooltipAccessor={(e) => `Bác sĩ: ${e.resource.doctor}\nBệnh viện: ${e.resource.hospital}\nTối đa: ${e.resource.max} bệnh nhân`}
@@ -699,6 +734,13 @@ export default function SchedulesManagement() {
                     }`}
                   >
                     {selectedEvent.resource.is_available ? 'Khóa ca trực' : 'Mở ca trực'}
+                  </button>
+                  <button 
+                    onClick={handleDeleteSchedule}
+                    className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition border border-red-200"
+                    title="Xóa ca trực"
+                  >
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
