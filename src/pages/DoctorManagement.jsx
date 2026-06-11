@@ -89,10 +89,25 @@ export default function DoctorManagement() {
       setLoadingDoctors(true);
       const currentHospitalId = user?.hospital_id || user?.hospital?.id;
       const responseData = await getDoctors(currentHospitalId, currentPage, limit);
-      const actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
+      let actualDoctors = responseData?.data ? responseData.data : (Array.isArray(responseData) ? responseData : []);
+      
+      const normalizedRole = (user?.role || user?.userRole || user?.user_role || "patient").toLowerCase();
+      if (normalizedRole === 'admin_hospital' && currentHospitalId) {
+        actualDoctors = actualDoctors.filter(d => 
+          Number(d.hospital_id) === Number(currentHospitalId) || 
+          (d.hospitals && d.hospitals.some(h => Number(h.id) === Number(currentHospitalId)))
+        );
+      }
+      
       setDoctors(actualDoctors);
-      if (responseData?.total) setTotalItems(responseData.total);
-      if (responseData?.totalPages) setTotalPages(responseData.totalPages);
+      
+      if (normalizedRole === 'admin_hospital') {
+        setTotalItems(actualDoctors.length);
+        setTotalPages(Math.ceil(actualDoctors.length / limit) || 1);
+      } else {
+        if (responseData?.total) setTotalItems(responseData.total);
+        if (responseData?.totalPages) setTotalPages(responseData.totalPages);
+      }
     } catch (e) {
       console.error("Load doctors error:", e);
     } finally {
@@ -445,6 +460,7 @@ export default function DoctorManagement() {
                   consultation_fee: Number(e.target.value),
                 }))
               }
+              onWheel={(e) => e.target.blur()}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
             />
           </div>

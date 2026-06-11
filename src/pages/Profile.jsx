@@ -628,6 +628,7 @@ export default function Profile() {
                   name="facility_fee"
                   value={hospitalData.facility_fee}
                   onChange={handleHospitalChange}
+                  onWheel={(e) => e.target.blur()}
                   className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                 />
               </div>

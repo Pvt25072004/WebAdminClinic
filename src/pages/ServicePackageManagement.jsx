@@ -437,7 +437,7 @@ export default function ServicePackageManagement() {
                   </div>
                 </div>
                 
-                <div className="text-sm text-slate-500 mb-4 line-clamp-2" dangerouslySetInnerHTML={{ __html: pkg.description || "Chưa có mô tả" }}></div>
+                <div className="text-sm text-slate-500 mb-4 break-words" dangerouslySetInnerHTML={{ __html: pkg.description || "Chưa có mô tả" }}></div>
                 
                 <div className="mt-auto">
                   <div className="flex items-center justify-between mb-4">

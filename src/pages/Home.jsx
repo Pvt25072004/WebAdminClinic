@@ -98,8 +98,13 @@ export default function Home() {
         const totalCategories = Array.isArray(categoriesRes)
           ? categoriesRes.length
           : 0;
+        const processedDoctors = (Array.isArray(doctors) ? doctors : Array.isArray(doctors?.data) ? doctors.data : []).filter((d) => {
+          if (normalizedRole !== "admin_hospital") return true;
+          return Number(d.hospital_id) === Number(hospitalId) || (d.hospitals && d.hospitals.some((h) => Number(h.id) === Number(hospitalId)));
+        });
+
         const totalAppointments = statsData?.totalAppointments || 0;
-        const totalDoctors = statsData?.totalDoctors || 0;
+        const totalDoctors = normalizedRole === "admin_hospital" ? processedDoctors.length : (statsData?.totalDoctors || 0);
         const totalRevenue = statsData?.totalRevenue || 0;
 
         let totalStars = 0;
@@ -171,7 +176,9 @@ export default function Home() {
               amount: index === 0 ? "Mới nhất" : "",
               type: "positive",
               isAvatar: true,
-              image: u.avatar_url || `https://i.pravatar.cc/100?img=${(u.id % 70) + 1}`,
+              image:
+                u.avatar_url ||
+                `https://i.pravatar.cc/100?img=${(u.id % 70) + 1}`,
               Icon: FaUser,
             });
           });
@@ -241,11 +248,7 @@ export default function Home() {
             : Array.isArray(hospitals?.data)
               ? hospitals.data
               : [],
-          doctorsData: Array.isArray(doctors)
-            ? doctors
-            : Array.isArray(doctors?.data)
-              ? doctors.data
-              : [],
+          doctorsData: processedDoctors,
           recentItems,
           alerts,
           recentAppointments,
@@ -332,8 +335,8 @@ export default function Home() {
     normalizedRole === "admin_hospital" ? hospitalStats : adminStats;
 
   return (
-    <div className="grid grid-cols-[3fr_1.2fr] gap-8 max-[1400px]:grid-cols-1">
-      <div className="grid gap-8">
+    <div className="grid grid-cols-[3fr_1.2fr] gap-8 max-[1400px]:grid-cols-1 w-full">
+      <div className="grid gap-8 min-w-0">
         <section className="mb-0 grid grid-cols-3 gap-6 max-xl:grid-cols-2 max-md:grid-cols-1">
           {statsToDisplay.map((card) => (
             <TransferCard key={card.title} {...card} />
@@ -354,10 +357,7 @@ export default function Home() {
             </>
           ) : (
             <>
-              <TransactionCard
-                title="Bệnh nhân mới (Hệ thống)"
-                items={stats.alerts}
-              />
+              <TransactionCard title="Bệnh nhân mới" items={stats.alerts} />
               <TransactionCard
                 title="Lịch hẹn mới nhất"
                 items={stats.recentAppointments}
@@ -367,7 +367,7 @@ export default function Home() {
         </section>
       </div>
 
-      <aside className="flex flex-col gap-8">
+      <aside className="flex flex-col gap-8 min-w-0">
         <SavingsCard
           timeOptions={["Daily", "Weekly", "Monthly", "Yearly"]}
           chartData={stats.revenueChart}
