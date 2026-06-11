@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Button from "../components/Button";
+import Pagination from "../components/Pagination";
 import {
   getCategories,
   createCategory,
@@ -48,21 +49,35 @@ export default function CategoryManagement() {
   });
   const [isUploading, setIsUploading] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [categoriesUsage, setCategoriesUsage] = useState([]);
 
   const loadData = async () => {
     try {
       setLoadingCategories(true);
       const promises = [
-        getCategories().catch(() => []),
+        getCategories(null, currentPage, limit).catch(() => []),
         getHospitals().catch(() => []),
       ];
       if (user?.role === "admin") {
         promises.push(getAdminCharts().catch(() => ({})));
       }
       const results = await Promise.all(promises);
-      const cats = Array.isArray(results[0]) ? results[0] : [];
-      setCategories(cats.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+      const catsResult = results[0];
+      if (catsResult && typeof catsResult === 'object' && 'data' in catsResult) {
+        setCategories(catsResult.data);
+        setTotalItems(catsResult.total);
+        setTotalPages(catsResult.totalPages);
+      } else {
+        const cats = Array.isArray(catsResult) ? catsResult : [];
+        setCategories(cats.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+        setTotalItems(cats.length);
+        setTotalPages(Math.ceil(cats.length / limit));
+      }
       setHospitals(Array.isArray(results[1]) ? results[1] : []);
       if (user?.role === "admin" && results[2]?.categoriesUsage) {
         setCategoriesUsage(results[2].categoriesUsage);
@@ -148,7 +163,7 @@ export default function CategoryManagement() {
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [currentPage]);
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -407,6 +422,16 @@ export default function CategoryManagement() {
           );
         })}
       </div>
+
+      {!loadingCategories && categories.length > 0 && (
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={totalItems}
+          itemsPerPage={limit}
+        />
+      )}
 
       {viewingCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">

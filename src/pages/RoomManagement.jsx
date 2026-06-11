@@ -4,6 +4,7 @@ import { getHospitals } from "../services/admin.hospitals.api";
 import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotification } from "../contexts/NotificationContext";
+import Pagination from "../components/Pagination";
 import { Building, Plus, Layers, Stethoscope, Hash, ListFilter, Edit, Trash2, X } from "lucide-react";
 
 export default function RoomManagement() {
@@ -19,6 +20,11 @@ export default function RoomManagement() {
   
   const [filterHospId, setFilterHospId] = useState("");
   const [filterCatId, setFilterCatId] = useState("");
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   
   const [formData, setFormData] = useState({
     hospital_id: "",
@@ -42,8 +48,12 @@ export default function RoomManagement() {
   }, [user]);
 
   useEffect(() => {
-    loadRooms();
+    setCurrentPage(1);
   }, [filterHospId, filterCatId, userHospId]);
+
+  useEffect(() => {
+    loadRooms();
+  }, [filterHospId, filterCatId, userHospId, currentPage]);
 
   const loadInitialData = async () => {
     try {
@@ -83,8 +93,17 @@ export default function RoomManagement() {
     setLoading(true);
     try {
       const hId = isAdminSystem ? filterHospId : userHospId;
-      const res = await getRooms(hId || null, filterCatId || null);
-      setRooms(Array.isArray(res) ? res : res?.data || []);
+      const res = await getRooms(hId || null, filterCatId || null, currentPage, limit);
+      if (res && typeof res === 'object' && 'data' in res) {
+        setRooms(res.data);
+        setTotalItems(res.total);
+        setTotalPages(res.totalPages);
+      } else {
+        const roomsArr = Array.isArray(res) ? res : [];
+        setRooms(roomsArr);
+        setTotalItems(roomsArr.length);
+        setTotalPages(Math.ceil(roomsArr.length / limit));
+      }
     } catch (error) {
       console.error("Error loading rooms:", error);
     } finally {
@@ -448,6 +467,16 @@ export default function RoomManagement() {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {!loading && rooms.length > 0 && (
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalItems}
+              itemsPerPage={limit}
+            />
           )}
         </div>
       </div>

@@ -6,8 +6,12 @@ const CATEGORIES_ENDPOINT = `${API_BASE_URL}/categories`;
 
 
 
-export const getCategories = async (hospitalId = null) => {
-  const query = hospitalId ? `?hospitalId=${hospitalId}` : '';
+export const getCategories = async (hospitalId = null, page = null, limit = null) => {
+  const params = new URLSearchParams();
+  if (hospitalId) params.append('hospitalId', hospitalId);
+  if (page) params.append('page', page);
+  if (limit) params.append('limit', limit);
+  const query = params.toString() ? `?${params.toString()}` : '';
   const response = await fetch(`${CATEGORIES_ENDPOINT}${query}`, {
     headers: {
       ...getAuthHeaders(),
