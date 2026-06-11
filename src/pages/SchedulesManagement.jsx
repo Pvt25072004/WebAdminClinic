@@ -5,8 +5,8 @@ import vi from "date-fns/locale/vi"; // Use Vietnamese locale
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { getAllSchedules, createSchedule, updateScheduleStatus } from "../services/admin.schedules.api";
 import { getAppointmentsBySchedule } from "../services/admin.appointments.api";
-import { getDoctors } from "../services/admin.doctors.api";
 import { getRooms } from "../services/admin.rooms.api";
+import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
 import { CalendarDays, Plus, X, Users, Clock, AlertCircle } from "lucide-react";
 
@@ -28,6 +28,7 @@ export default function SchedulesManagement() {
   const [schedules, setSchedules] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState(Views.MONTH);
   const [date, setDate] = useState(new Date());
@@ -44,6 +45,9 @@ export default function SchedulesManagement() {
     max_patients: 10,
     room_id: "",
   });
+
+  const [filterCategory, setFilterCategory] = useState("");
+  const [searchDoctor, setSearchDoctor] = useState("");
 
   // Details Modal states
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -66,7 +70,18 @@ export default function SchedulesManagement() {
   useEffect(() => {
     void loadSchedules();
     loadDoctors();
+    loadCategories();
   }, [user?.hospital_id]);
+
+  const loadCategories = async () => {
+    try {
+      const hospId = user?.role === 'admin_hospital' ? user?.hospital_id : null;
+      const data = await getCategories(hospId);
+      setCategories(Array.isArray(data) ? data : (data?.data || []));
+    } catch (e) {
+      console.error("Load categories error:", e);
+    }
+  };
 
   const loadDoctors = async () => {
     try {
@@ -91,7 +106,7 @@ export default function SchedulesManagement() {
 
   useEffect(() => {
     const loadRooms = async () => {
-      if (!formData.doctor_id || formData.doctor_id === "all") {
+      if (!formData.doctor_id || formData.doctor_id === "all" || formData.doctor_id === "all_in_category") {
         setRooms([]);
         return;
       }
@@ -124,8 +139,8 @@ export default function SchedulesManagement() {
     
     let hospitalId = user?.hospital_id;
 
-    // Find selected doctor to get their hospital_id (only if not 'all')
-    if (formData.doctor_id !== "all") {
+    // Find selected doctor to get their hospital_id (only if not 'all' and not 'all_in_category')
+    if (formData.doctor_id !== "all" && formData.doctor_id !== "all_in_category") {
       const selectedDoc = doctors.find(d => d.id === parseInt(formData.doctor_id));
       if (!selectedDoc) return;
       if (!hospitalId && selectedDoc.hospitals && selectedDoc.hospitals.length > 0) {
@@ -157,6 +172,10 @@ export default function SchedulesManagement() {
 
       if (formData.doctor_id === "all") {
         payload.apply_to_all_doctors = true;
+        delete payload.doctor_id;
+      } else if (formData.doctor_id === "all_in_category") {
+        payload.apply_to_all_doctors = true;
+        payload.category_id = parseInt(filterCategory);
         delete payload.doctor_id;
       } else {
         payload.doctor_id = parseInt(formData.doctor_id);
@@ -342,6 +361,30 @@ export default function SchedulesManagement() {
             
             <form onSubmit={handleCreateSchedule} className="p-5 space-y-4">
               <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Lọc theo Chuyên Khoa</label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => {
+                    setFilterCategory(e.target.value);
+                    setFormData({...formData, doctor_id: ""});
+                  }}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-3"
+                >
+                  <option value="">-- Tất cả chuyên khoa --</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tìm kiếm Bác sĩ</label>
+                <input
+                  type="text"
+                  placeholder="Nhập tên bác sĩ..."
+                  value={searchDoctor}
+                  onChange={(e) => setSearchDoctor(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-3"
+                />
+
                 <label className="block text-sm font-medium text-slate-700 mb-1">Chọn Bác sĩ</label>
                 <select 
                   required
@@ -350,8 +393,12 @@ export default function SchedulesManagement() {
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="">-- Chọn bác sĩ --</option>
-                  <option value="all">-- Áp dụng cho tất cả bác sĩ --</option>
-                  {doctors.map(doc => (
+                  {!filterCategory && <option value="all">-- Áp dụng cho tất cả bác sĩ --</option>}
+                  {filterCategory && <option value="all_in_category">-- Áp dụng cho toàn bộ bác sĩ trong chuyên khoa này --</option>}
+                  {doctors
+                    .filter(doc => !filterCategory || String(doc.category?.id) === String(filterCategory))
+                    .filter(doc => !searchDoctor || (doc.user?.full_name || "").toLowerCase().includes(searchDoctor.toLowerCase()))
+                    .map(doc => (
                     <option key={doc.id} value={doc.id}>
                       BS. {doc.user?.full_name || `ID: ${doc.id}`} - {doc.specialty}
                     </option>

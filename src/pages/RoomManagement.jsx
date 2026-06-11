@@ -22,8 +22,11 @@ export default function RoomManagement() {
     hospital_id: "",
     category_id: "",
     floor: "1",
-    roomCount: "5"
+    roomCount: "5",
+    manualRoomName: "",
   });
+
+  const [creationMode, setCreationMode] = useState("auto"); // "auto" or "manual"
 
   const isAdminSystem = user?.role === "admin_system";
   const userHospId = user?.role === "admin_hospital" ? user?.hospital_id : null;
@@ -42,18 +45,33 @@ export default function RoomManagement() {
         const hospRes = await getHospitals();
         setHospitals(Array.isArray(hospRes) ? hospRes : hospRes?.data || []);
       }
-      const catRes = await getCategories();
-      setCategories(Array.isArray(catRes) ? catRes : catRes?.data || []);
       
-      // Init form data with user's hospital if not admin_system
+      let initHospId = null;
       if (!isAdminSystem && userHospId) {
         setFormData(prev => ({ ...prev, hospital_id: userHospId }));
         setFilterHospId(userHospId);
+        initHospId = userHospId;
       }
+      
+      const catRes = await getCategories(initHospId);
+      setCategories(Array.isArray(catRes) ? catRes : catRes?.data || []);
     } catch (error) {
       console.error("Error loading initial data:", error);
     }
   };
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const hId = formData.hospital_id || filterHospId || userHospId;
+      try {
+        const catRes = await getCategories(hId);
+        setCategories(Array.isArray(catRes) ? catRes : catRes?.data || []);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchCategories();
+  }, [formData.hospital_id, filterHospId]);
 
   const loadRooms = async () => {
     setLoading(true);
@@ -70,40 +88,78 @@ export default function RoomManagement() {
 
   const handleBulkCreate = async (e) => {
     e.preventDefault();
-    if (!formData.hospital_id || !formData.category_id || !formData.floor || !formData.roomCount) {
-      alert("Vui lòng điền đầy đủ thông tin");
+    if (!formData.hospital_id || !formData.category_id) {
+      alert("Vui lòng điền Bệnh viện và Chuyên khoa");
       return;
     }
 
-    const count = parseInt(formData.roomCount);
-    if (isNaN(count) || count <= 0 || count > 100) {
-      alert("Số lượng phòng phải từ 1 đến 100");
-      return;
-    }
-
-    const floor = formData.floor.trim();
     const newRooms = [];
-    
-    for (let i = 1; i <= count; i++) {
-      // Format: T[floor][01, 02...] -> e.g. T101, T205
-      const roomNumber = i.toString().padStart(2, "0");
-      const roomName = `T${floor}${roomNumber}`;
+    let message = "";
+
+    if (creationMode === "auto") {
+      if (!formData.floor || !formData.roomCount) {
+        alert("Vui lòng điền Tầng và Số lượng");
+        return;
+      }
+      const count = parseInt(formData.roomCount);
+      if (isNaN(count) || count <= 0 || count > 100) {
+        alert("Số lượng phòng phải từ 1 đến 100");
+        return;
+      }
+
+      const floor = formData.floor.trim();
       
+      // Tìm số thứ tự lớn nhất hiện có cho tầng này
+      const floorRooms = rooms.filter(r => 
+        String(r.hospital_id) === String(formData.hospital_id) && 
+        r.name.startsWith(`T${floor}`)
+      );
+      
+      let maxNum = 0;
+      floorRooms.forEach(r => {
+        // T105 -> lấy "05"
+        const numPart = r.name.replace(`T${floor}`, '');
+        const n = parseInt(numPart);
+        if (!isNaN(n) && n > maxNum) {
+          maxNum = n;
+        }
+      });
+
+      for (let i = 1; i <= count; i++) {
+        const nextNum = maxNum + i;
+        const roomNumber = nextNum.toString().padStart(2, "0");
+        const roomName = `T${floor}${roomNumber}`;
+        
+        newRooms.push({
+          name: roomName,
+          hospital_id: parseInt(formData.hospital_id),
+          category_id: parseInt(formData.category_id),
+        });
+      }
+      
+      message = `Bạn sắp tạo ${count} phòng (từ T${floor}${String(maxNum + 1).padStart(2, '0')} đến T${floor}${String(maxNum + count).padStart(2, "0")}). Xác nhận?`;
+    } else {
+      if (!formData.manualRoomName.trim()) {
+        alert("Vui lòng nhập tên phòng");
+        return;
+      }
       newRooms.push({
-        name: roomName,
+        name: formData.manualRoomName.trim(),
         hospital_id: parseInt(formData.hospital_id),
         category_id: parseInt(formData.category_id),
       });
+      message = `Bạn sắp tạo phòng khám: ${formData.manualRoomName}. Xác nhận?`;
     }
 
-    if (!window.confirm(`Bạn sắp tạo ${count} phòng (từ T${floor}01 đến T${floor}${count.toString().padStart(2, "0")}). Xác nhận?`)) {
+    if (!window.confirm(message)) {
       return;
     }
 
     setSubmitLoading(true);
     try {
       await createBulkRooms(newRooms);
-      alert("Tạo phòng hàng loạt thành công!");
+      alert("Tạo phòng thành công!");
+      if (creationMode === "manual") setFormData(prev => ({...prev, manualRoomName: ""}));
       loadRooms();
     } catch (error) {
       alert(error.message || "Lỗi khi tạo phòng");
@@ -123,10 +179,23 @@ export default function RoomManagement() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form Tạo Hàng Loạt */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 lg:col-span-1 h-fit sticky top-6">
-          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 border-b pb-3">
-            <Plus className="w-5 h-5 text-green-600" /> Tạo nhanh phòng khám
-          </h2>
+          <div className="flex items-center justify-between border-b pb-3 mb-4">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Plus className="w-5 h-5 text-green-600" /> Tạo phòng khám
+            </h2>
+          </div>
           
+          <div className="flex gap-2 mb-4 bg-slate-100 p-1 rounded-lg">
+            <button 
+              onClick={() => setCreationMode("auto")}
+              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${creationMode === "auto" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >Tự động</button>
+            <button 
+              onClick={() => setCreationMode("manual")}
+              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${creationMode === "manual" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >Thủ công</button>
+          </div>
+
           <form onSubmit={handleBulkCreate} className="space-y-4">
             {isAdminSystem && (
               <div>
@@ -164,40 +233,57 @@ export default function RoomManagement() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {creationMode === "auto" ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
+                      <Layers className="w-4 h-4" /> Số Tầng
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ví dụ: 1, 2"
+                      value={formData.floor}
+                      onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
+                      <Hash className="w-4 h-4" /> Số lượng
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      max="100"
+                      value={formData.roomCount}
+                      onChange={(e) => setFormData({ ...formData, roomCount: e.target.value })}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2 text-sm text-blue-800">
+                  <span className="font-semibold">Cơ chế thông minh:</span> Sẽ tự nối tiếp số thứ tự phòng đang có ở tầng đó. Tránh trùng tên. <br />
+                  <span className="text-xs text-blue-600">Mẫu: T[tầng][số thứ tự]</span>
+                </div>
+              </>
+            ) : (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
-                  <Layers className="w-4 h-4" /> Số Tầng
+                  <Building className="w-4 h-4" /> Tên phòng khám
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: 1, 2"
-                  value={formData.floor}
-                  onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+                  placeholder="Ví dụ: P.Khám Răng Đặc Biệt"
+                  value={formData.manualRoomName}
+                  onChange={(e) => setFormData({ ...formData, manualRoomName: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
-                  <Hash className="w-4 h-4" /> Số lượng
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max="100"
-                  value={formData.roomCount}
-                  onChange={(e) => setFormData({ ...formData, roomCount: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2 text-sm text-blue-800">
-              <span className="font-semibold">Mẫu sinh tên:</span> T[tầng][số_thứ_tự] <br />
-              <span className="text-xs text-blue-600">Ví dụ: Tầng {formData.floor || "1"}, {formData.roomCount || "5"} phòng ➔ T{formData.floor || "1"}01 đến T{formData.floor || "1"}{String(formData.roomCount || "5").padStart(2, '0')}</span>
-            </div>
+            )}
 
             <button
               type="submit"
@@ -207,7 +293,7 @@ export default function RoomManagement() {
               {submitLoading ? (
                 <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               ) : (
-                <><Plus className="w-5 h-5" /> Tạo Tự Động</>
+                <><Plus className="w-5 h-5" /> {creationMode === "auto" ? "Tạo Tự Động" : "Tạo Phòng Khám"}</>
               )}
             </button>
           </form>

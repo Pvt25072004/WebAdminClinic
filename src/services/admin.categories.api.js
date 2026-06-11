@@ -6,8 +6,9 @@ const CATEGORIES_ENDPOINT = `${API_BASE_URL}/categories`;
 
 
 
-export const getCategories = async () => {
-  const response = await fetch(CATEGORIES_ENDPOINT, {
+export const getCategories = async (hospitalId = null) => {
+  const query = hospitalId ? `?hospitalId=${hospitalId}` : '';
+  const response = await fetch(`${CATEGORIES_ENDPOINT}${query}`, {
     headers: {
       ...getAuthHeaders(),
     },
