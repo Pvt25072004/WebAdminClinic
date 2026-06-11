@@ -1,4 +1,7 @@
-import http from './httpEnhanced';
+import { getAuthHeaders, handleResponse } from './http';
+import { API_BASE_URL } from '../utils/constants';
+
+const ROOMS_ENDPOINT = `${API_BASE_URL}/rooms`;
 
 /**
  * Get all rooms based on filters
@@ -7,7 +10,7 @@ import http from './httpEnhanced';
  * @returns {Promise<Array>} Array of rooms
  */
 export const getRooms = async (hospital_id = null, category_id = null) => {
-    let url = '/rooms';
+    let url = ROOMS_ENDPOINT;
     const params = new URLSearchParams();
     
     if (hospital_id) params.append('hospital_id', hospital_id);
@@ -19,12 +22,36 @@ export const getRooms = async (hospital_id = null, category_id = null) => {
     }
 
     try {
-        const response = await http.get(url);
-        // Tùy thuộc vào backend format (có paginate hay không)
-        // Nếu NestJS trả về array thì map ra, nếu trả về {data, total} thì lấy data
-        return response.data;
+        const response = await fetch(url, {
+            headers: { ...getAuthHeaders() },
+            credentials: "include",
+        });
+        return await handleResponse(response, "Không thể tải danh sách phòng khám");
     } catch (error) {
         console.error('Error fetching rooms:', error);
+        throw error;
+    }
+};
+
+/**
+ * Bulk create rooms
+ * @param {Array} rooms Array of room objects { name, hospital_id, category_id }
+ * @returns {Promise<Array>} Created rooms
+ */
+export const createBulkRooms = async (rooms) => {
+    try {
+        const response = await fetch(`${ROOMS_ENDPOINT}/bulk`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeaders(),
+            },
+            credentials: "include",
+            body: JSON.stringify(rooms),
+        });
+        return await handleResponse(response, "Không thể tạo phòng khám hàng loạt");
+    } catch (error) {
+        console.error('Error creating bulk rooms:', error);
         throw error;
     }
 };
