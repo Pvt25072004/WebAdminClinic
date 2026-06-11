@@ -41,3 +41,14 @@ export const updateScheduleStatus = async (id, isAvailable) => {
   });
   return handleResponse(response, "Không thể cập nhật trạng thái lịch biểu");
 };
+
+export const deleteSchedule = async (id) => {
+  const response = await fetch(`${SCHEDULES_ENDPOINT}/${id}`, {
+    method: "DELETE",
+    headers: {
+      ...getAuthHeaders(),
+    },
+    credentials: "include",
+  });
+  return handleResponse(response, "Không thể xóa lịch biểu");
+};

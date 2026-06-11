@@ -55,3 +55,37 @@ export const createBulkRooms = async (rooms) => {
         throw error;
     }
 };
+
+export const updateRoom = async (id, data) => {
+    try {
+        const response = await fetch(`${ROOMS_ENDPOINT}/${id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeaders(),
+            },
+            credentials: "include",
+            body: JSON.stringify(data),
+        });
+        return await handleResponse(response, "Không thể cập nhật phòng khám");
+    } catch (error) {
+        console.error('Error updating room:', error);
+        throw error;
+    }
+};
+
+export const deleteRoom = async (id) => {
+    try {
+        const response = await fetch(`${ROOMS_ENDPOINT}/${id}`, {
+            method: "DELETE",
+            headers: {
+                ...getAuthHeaders(),
+            },
+            credentials: "include",
+        });
+        return await handleResponse(response, "Không thể xóa phòng khám");
+    } catch (error) {
+        console.error('Error deleting room:', error);
+        throw error;
+    }
+};
