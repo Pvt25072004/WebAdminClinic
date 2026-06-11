@@ -6,6 +6,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { getAllSchedules, createSchedule, updateScheduleStatus } from "../services/admin.schedules.api";
 import { getAppointmentsBySchedule } from "../services/admin.appointments.api";
 import { getDoctors } from "../services/admin.doctors.api";
+import { getRooms } from "../services/admin.rooms.api";
 import { useAuth } from "../contexts/AuthContext";
 import { CalendarDays, Plus, X, Users, Clock, AlertCircle } from "lucide-react";
 
@@ -26,6 +27,7 @@ export default function SchedulesManagement() {
   const { user } = useAuth();
   const [schedules, setSchedules] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState(Views.MONTH);
   const [date, setDate] = useState(new Date());
@@ -40,6 +42,7 @@ export default function SchedulesManagement() {
     start_time: "08:00:00",
     end_time: "17:00:00",
     max_patients: 10,
+    room_id: "",
   });
 
   // Details Modal states
@@ -77,6 +80,32 @@ export default function SchedulesManagement() {
     }
   };
 
+  useEffect(() => {
+    const loadRooms = async () => {
+      if (!formData.doctor_id || formData.doctor_id === "all") {
+        setRooms([]);
+        return;
+      }
+      try {
+        const selectedDoc = doctors.find(d => d.id === parseInt(formData.doctor_id));
+        if (selectedDoc) {
+          const hospId = user?.role === 'admin_hospital' ? user?.hospital_id : (selectedDoc.hospitals?.[0]?.id || null);
+          const catId = selectedDoc.category?.id || null;
+          
+          if (hospId) {
+            const fetchedRooms = await getRooms(hospId, catId);
+            setRooms(Array.isArray(fetchedRooms) ? fetchedRooms : (fetchedRooms?.data || []));
+          } else {
+             setRooms([]);
+          }
+        }
+      } catch (e) {
+        console.error("Load rooms error:", e);
+      }
+    };
+    loadRooms();
+  }, [formData.doctor_id, doctors, user]);
+
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
     if (!formData.doctor_id || !formData.work_date) {
@@ -106,6 +135,12 @@ export default function SchedulesManagement() {
         max_patients: parseInt(formData.max_patients),
         hospital_id: hospitalId,
       };
+      
+      if (payload.room_id) {
+        payload.room_id = parseInt(payload.room_id);
+      } else {
+        delete payload.room_id; // Avoid sending empty string
+      }
       
       if (!payload.end_date) {
         delete payload.end_date;
@@ -314,6 +349,24 @@ export default function SchedulesManagement() {
                   ))}
                 </select>
               </div>
+
+              {formData.doctor_id && formData.doctor_id !== "all" && rooms.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Chọn Phòng Khám</label>
+                  <select 
+                    value={formData.room_id}
+                    onChange={(e) => setFormData({...formData, room_id: e.target.value})}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">-- Có thể chọn hoặc để trống --</option>
+                    {rooms.map(room => (
+                      <option key={room.id} value={room.id}>
+                        {room.name} {room.category?.name ? `(${room.category.name})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
