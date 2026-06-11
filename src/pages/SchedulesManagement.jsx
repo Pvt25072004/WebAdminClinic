@@ -141,6 +141,7 @@ export default function SchedulesManagement() {
     end_time: "",
     max_patients: ""
   });
+  const [editRooms, setEditRooms] = useState([]);
 
   // Day View Modal states
   const [isDayViewModalOpen, setIsDayViewModalOpen] = useState(false);
@@ -405,7 +406,7 @@ export default function SchedulesManagement() {
     }
   };
 
-  const handleEditScheduleClick = () => {
+  const handleEditScheduleClick = async () => {
      setEditFormData({
         room_id: selectedEvent.resource.schedule.room_id || "",
         start_time: selectedEvent.resource.schedule.start_time || "08:00:00",
@@ -413,6 +414,20 @@ export default function SchedulesManagement() {
         max_patients: selectedEvent.resource.schedule.max_patients || 10
      });
      setIsEditingSchedule(true);
+
+     try {
+       const sch = selectedEvent.resource.schedule;
+       const docCatId = sch.doctor?.category?.id || sch.doctor?.category_id || null;
+       const docHospId = sch.hospital?.id || sch.hospital_id || user?.hospital_id || null;
+       if (docHospId) {
+         const fetchedRooms = await getRooms(docHospId, docCatId);
+         setEditRooms(Array.isArray(fetchedRooms) ? fetchedRooms : (fetchedRooms?.data || []));
+       } else {
+         setEditRooms([]);
+       }
+     } catch (e) {
+       console.error("Lỗi tải phòng lúc sửa:", e);
+     }
   };
 
   const handleSaveEditSchedule = async (e) => {
@@ -1082,7 +1097,7 @@ export default function SchedulesManagement() {
                           className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
                         >
                           <option value="">-- Để trống --</option>
-                          {rooms.map(room => (
+                          {editRooms.map(room => (
                             <option key={room.id} value={room.id}>{room.name} {room.category?.name ? `(${room.category.name})` : ''}</option>
                           ))}
                         </select>
