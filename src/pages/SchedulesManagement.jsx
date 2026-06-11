@@ -446,12 +446,13 @@ export default function SchedulesManagement() {
                     <div className="p-3 text-center text-slate-500 text-sm">Không tìm thấy bác sĩ nào</div>
                   )}
                 </div>
+              </div>
 
-                {/* Cột phải: Thời gian & Địa điểm */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-emerald-500" /> Thời gian & Địa điểm
-                  </h4>
+              {/* Cột phải: Thời gian & Địa điểm */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-emerald-500" /> Thời gian & Địa điểm
+                </h4>
                   {selectedDoctorIds.length > 0 && rooms.length > 0 && (
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Chọn Phòng Khám</label>
