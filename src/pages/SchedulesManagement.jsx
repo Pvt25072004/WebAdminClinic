@@ -8,6 +8,7 @@ import { getAppointmentsBySchedule } from "../services/admin.appointments.api";
 import { getRooms } from "../services/admin.rooms.api";
 import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
+import { useNotification } from "../contexts/NotificationContext";
 import { CalendarDays, Plus, X, Users, Clock, AlertCircle } from "lucide-react";
 
 // Setup the localizer by providing the date-fns functions
@@ -25,6 +26,7 @@ const localizer = dateFnsLocalizer({
 
 export default function SchedulesManagement() {
   const { user } = useAuth();
+  const { showSuccess, showError, showWarning } = useNotification();
   const [schedules, setSchedules] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -133,7 +135,7 @@ export default function SchedulesManagement() {
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
     if (!formData.doctor_id || !formData.work_date) {
-      alert("Vui lòng chọn bác sĩ (hoặc tất cả) và ngày trực!");
+      showWarning("Vui lòng chọn bác sĩ (hoặc tất cả) và ngày trực!");
       return;
     }
     
@@ -147,7 +149,7 @@ export default function SchedulesManagement() {
         hospitalId = selectedDoc.hospitals[0].id;
       }
     } else if (!hospitalId) {
-      alert("Super Admin không thể chọn 'Áp dụng cho tất cả bác sĩ' mà không có cơ sở y tế mặc định. Vui lòng chọn một bác sĩ cụ thể.");
+      showError("Super Admin không thể chọn 'Áp dụng cho tất cả bác sĩ' mà không có cơ sở y tế mặc định. Vui lòng chọn một bác sĩ cụ thể.");
       return;
     }
 
@@ -184,14 +186,14 @@ export default function SchedulesManagement() {
       const response = await createSchedule(payload);
       
       if (response && response.message) {
-        alert(response.message);
+        showSuccess(response.message);
       } else {
-        alert("Tạo lịch thành công!");
+        showSuccess("Tạo lịch thành công!");
       }
       setIsModalOpen(false);
       loadSchedules();
     } catch (error) {
-      alert(error.message || "Tạo lịch thất bại");
+      showError(error.message || "Tạo lịch thất bại");
     } finally {
       setIsSubmitting(false);
     }
@@ -216,11 +218,11 @@ export default function SchedulesManagement() {
     try {
       const newStatus = !selectedEvent.resource.is_available;
       await updateScheduleStatus(selectedEvent.id, newStatus);
-      alert(`Đã ${newStatus ? 'mở' : 'đóng'} lịch thành công!`);
+      showSuccess(`Đã ${newStatus ? 'mở' : 'đóng'} lịch thành công!`);
       setIsDetailsModalOpen(false);
       loadSchedules();
     } catch (error) {
-      alert(error.message || "Không thể cập nhật trạng thái lịch");
+      showError(error.message || "Không thể cập nhật trạng thái lịch");
     }
   };
 
