@@ -5,6 +5,7 @@ import vi from "date-fns/locale/vi"; // Use Vietnamese locale
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { getAllSchedules, createSchedule, updateScheduleStatus } from "../services/admin.schedules.api";
 import { getAppointmentsBySchedule } from "../services/admin.appointments.api";
+import { getDoctors } from "../services/admin.doctors.api";
 import { getRooms } from "../services/admin.rooms.api";
 import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
@@ -350,19 +351,26 @@ export default function SchedulesManagement() {
       {/* Modal Tạo Lịch */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="font-bold text-slate-800">Tạo Lịch Trực Mới</h3>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-blue-600" /> Tạo Lịch Trực Mới
+              </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handleCreateSchedule} className="p-5 space-y-4">
-              <div>
+            <form onSubmit={handleCreateSchedule} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Cột trái: Chọn Bác sĩ */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-indigo-500" /> Thông tin Bác sĩ
+                  </h4>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Lọc theo Chuyên Khoa</label>
                 <select
                   value={filterCategory}
@@ -438,99 +446,106 @@ export default function SchedulesManagement() {
                     <div className="p-3 text-center text-slate-500 text-sm">Không tìm thấy bác sĩ nào</div>
                   )}
                 </div>
+
+                {/* Cột phải: Thời gian & Địa điểm */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-500" /> Thời gian & Địa điểm
+                  </h4>
+                  {selectedDoctorIds.length > 0 && rooms.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Chọn Phòng Khám</label>
+                      <select 
+                        value={formData.room_id}
+                        onChange={(e) => setFormData({...formData, room_id: e.target.value})}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">-- Dùng chung phòng cho các bác sĩ đã chọn (tùy chọn) --</option>
+                        {rooms.map(room => (
+                          <option key={room.id} value={room.id}>
+                            {room.name} {room.category?.name ? `(${room.category.name})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Từ ngày</label>
+                      <input 
+                        type="date"
+                        required
+                        value={formData.work_date}
+                        onChange={(e) => setFormData({...formData, work_date: e.target.value})}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Đến ngày (Tùy chọn)</label>
+                      <input 
+                        type="date"
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Giờ bắt đầu</label>
+                      <input 
+                        type="time"
+                        required
+                        step="2"
+                        value={formData.start_time}
+                        onChange={(e) => setFormData({...formData, start_time: e.target.value})}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Giờ kết thúc</label>
+                      <input 
+                        type="time"
+                        required
+                        step="2"
+                        value={formData.end_time}
+                        onChange={(e) => setFormData({...formData, end_time: e.target.value})}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Số lượng BN tối đa</label>
+                    <input 
+                      type="number"
+                      min="1"
+                      required
+                      value={formData.max_patients}
+                      onChange={(e) => setFormData({...formData, max_patients: e.target.value})}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {selectedDoctorIds.length > 0 && rooms.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Chọn Phòng Khám</label>
-                  <select 
-                    value={formData.room_id}
-                    onChange={(e) => setFormData({...formData, room_id: e.target.value})}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">-- Dùng chung phòng cho các bác sĩ đã chọn (tùy chọn) --</option>
-                    {rooms.map(room => (
-                      <option key={room.id} value={room.id}>
-                        {room.name} {room.category?.name ? `(${room.category.name})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Từ ngày</label>
-                  <input 
-                    type="date"
-                    required
-                    value={formData.work_date}
-                    onChange={(e) => setFormData({...formData, work_date: e.target.value})}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Đến ngày (Tùy chọn)</label>
-                  <input 
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Giờ bắt đầu</label>
-                  <input 
-                    type="time"
-                    required
-                    step="2"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Giờ kết thúc</label>
-                  <input 
-                    type="time"
-                    required
-                    step="2"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({...formData, end_time: e.target.value})}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Số lượng BN tối đa</label>
-                <input 
-                  type="number"
-                  min="1"
-                  required
-                  value={formData.max_patients}
-                  onChange={(e) => setFormData({...formData, max_patients: e.target.value})}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
+              <div className="pt-6 mt-6 border-t border-slate-100 flex gap-4 justify-end">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 font-medium rounded-xl hover:bg-slate-50 transition-colors"
+                  className="px-6 py-2.5 border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors"
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button 
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="px-8 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isSubmitting ? "Đang tạo..." : "Xác nhận Tạo"}
+                  {isSubmitting && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+                  {isSubmitting ? "Đang xử lý..." : "Xác nhận Tạo Lịch"}
                 </button>
               </div>
             </form>

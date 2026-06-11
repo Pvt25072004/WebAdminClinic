@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { getRooms, createBulkRooms } from "../services/admin.rooms.api";
+import { getRooms, createBulkRooms, updateRoom, deleteRoom } from "../services/admin.rooms.api";
 import { getHospitals } from "../services/admin.hospitals.api";
 import { getCategories } from "../services/admin.categories.api";
 import { useAuth } from "../contexts/AuthContext";
-import { Building, Plus, Layers, Stethoscope, Hash, ListFilter } from "lucide-react";
+import { Building, Plus, Layers, Stethoscope, Hash, ListFilter, Edit, Trash2, X } from "lucide-react";
 
 export default function RoomManagement() {
   const { user } = useAuth();
@@ -27,6 +27,10 @@ export default function RoomManagement() {
   });
 
   const [creationMode, setCreationMode] = useState("auto"); // "auto" or "manual"
+
+  const [editingRoom, setEditingRoom] = useState(null);
+  const [editFormData, setEditFormData] = useState({ name: "", category_id: "", hospital_id: "" });
+  const [editLoading, setEditLoading] = useState(false);
 
   const isAdminSystem = user?.role === "admin_system";
   const userHospId = user?.role === "admin_hospital" ? user?.hospital_id : null;
@@ -165,6 +169,49 @@ export default function RoomManagement() {
       alert(error.message || "Lỗi khi tạo phòng");
     } finally {
       setSubmitLoading(false);
+    }
+  };
+
+  const handleEditClick = (room) => {
+    setEditingRoom(room);
+    setEditFormData({
+      name: room.name,
+      category_id: room.category?.id || "",
+      hospital_id: room.hospital_id || "",
+    });
+  };
+
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    if (!editFormData.name.trim()) {
+      alert("Tên phòng không được để trống!");
+      return;
+    }
+    setEditLoading(true);
+    try {
+      const payload = { ...editFormData };
+      if (payload.hospital_id) payload.hospital_id = parseInt(payload.hospital_id);
+      if (payload.category_id) payload.category_id = parseInt(payload.category_id);
+      
+      await updateRoom(editingRoom.id, payload);
+      alert("Cập nhật phòng thành công!");
+      setEditingRoom(null);
+      loadRooms();
+    } catch (error) {
+      alert(error.message || "Lỗi khi cập nhật phòng");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteRoom = async (id, name) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa phòng [${name}]? Hành động này không thể hoàn tác.`)) return;
+    try {
+      await deleteRoom(id);
+      alert("Đã xóa phòng thành công!");
+      loadRooms();
+    } catch (error) {
+      alert(error.message || "Lỗi khi xóa phòng");
     }
   };
 
@@ -349,6 +396,7 @@ export default function RoomManagement() {
                     <th className="py-3 px-4 font-semibold">Số / Tên Phòng</th>
                     <th className="py-3 px-4 font-semibold">Chuyên Khoa</th>
                     {isAdminSystem && <th className="py-3 px-4 font-semibold">Cơ sở</th>}
+                    <th className="py-3 px-4 font-semibold text-center w-24">Hành động</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -368,6 +416,24 @@ export default function RoomManagement() {
                           {room.hospital?.name || "-"}
                         </td>
                       )}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleEditClick(room)}
+                            className="p-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRoom(room.id, room.name)}
+                            className="p-1.5 text-red-600 bg-red-50 rounded hover:bg-red-100 transition"
+                            title="Xóa"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -376,6 +442,83 @@ export default function RoomManagement() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingRoom && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="font-bold text-lg text-slate-800">Chỉnh sửa phòng khám</h3>
+              <button onClick={() => setEditingRoom(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateSubmit} className="p-5 space-y-4">
+              {isAdminSystem && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Bệnh viện</label>
+                  <select
+                    required
+                    value={editFormData.hospital_id}
+                    onChange={(e) => setEditFormData({ ...editFormData, hospital_id: e.target.value })}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="">-- Chọn bệnh viện --</option>
+                    {hospitals.map((h) => (
+                      <option key={h.id} value={h.id}>{h.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Chuyên khoa</label>
+                <select
+                  required
+                  value={editFormData.category_id}
+                  onChange={(e) => setEditFormData({ ...editFormData, category_id: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                >
+                  <option value="">-- Chọn chuyên khoa --</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tên phòng</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingRoom(null)}
+                  className="flex-1 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-blue-400 flex justify-center items-center gap-2"
+                >
+                  {editLoading && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+                  Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
