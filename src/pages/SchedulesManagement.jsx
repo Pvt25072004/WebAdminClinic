@@ -39,7 +39,6 @@ export default function SchedulesManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    doctor_id: "",
     work_date: "",
     end_date: "",
     start_time: "08:00:00",
@@ -47,6 +46,9 @@ export default function SchedulesManagement() {
     max_patients: 10,
     room_id: "",
   });
+
+  const [selectedDoctorIds, setSelectedDoctorIds] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   const [filterCategory, setFilterCategory] = useState("");
   const [searchDoctor, setSearchDoctor] = useState("");
@@ -108,12 +110,12 @@ export default function SchedulesManagement() {
 
   useEffect(() => {
     const loadRooms = async () => {
-      if (!formData.doctor_id || formData.doctor_id === "all" || formData.doctor_id === "all_in_category") {
+      if (selectedDoctorIds.length === 0) {
         setRooms([]);
         return;
       }
       try {
-        const selectedDoc = doctors.find(d => d.id === parseInt(formData.doctor_id));
+        const selectedDoc = doctors.find(d => d.id === selectedDoctorIds[0]);
         if (selectedDoc) {
           const hospId = user?.role === 'admin_hospital' ? user?.hospital_id : (selectedDoc.hospitals?.[0]?.id || null);
           const catId = selectedDoc.category?.id || null;
@@ -134,22 +136,25 @@ export default function SchedulesManagement() {
 
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
-    if (!formData.doctor_id || !formData.work_date) {
-      showWarning("Vui lòng chọn bác sĩ (hoặc tất cả) và ngày trực!");
+    if (selectedDoctorIds.length === 0 && !selectAll) {
+      showWarning("Vui lòng chọn ít nhất một bác sĩ!");
+      return;
+    }
+    if (!formData.work_date) {
+      showWarning("Vui lòng chọn ngày trực!");
       return;
     }
     
     let hospitalId = user?.hospital_id;
 
-    // Find selected doctor to get their hospital_id (only if not 'all' and not 'all_in_category')
-    if (formData.doctor_id !== "all" && formData.doctor_id !== "all_in_category") {
-      const selectedDoc = doctors.find(d => d.id === parseInt(formData.doctor_id));
-      if (!selectedDoc) return;
-      if (!hospitalId && selectedDoc.hospitals && selectedDoc.hospitals.length > 0) {
-        hospitalId = selectedDoc.hospitals[0].id;
+    // Lấy hospitalId từ bác sĩ đầu tiên nếu chưa có
+    if (!hospitalId && selectedDoctorIds.length > 0) {
+      const firstDoc = doctors.find(d => d.id === selectedDoctorIds[0]);
+      if (firstDoc && firstDoc.hospitals && firstDoc.hospitals.length > 0) {
+        hospitalId = firstDoc.hospitals[0].id;
       }
-    } else if (!hospitalId) {
-      showError("Super Admin không thể chọn 'Áp dụng cho tất cả bác sĩ' mà không có cơ sở y tế mặc định. Vui lòng chọn một bác sĩ cụ thể.");
+    } else if (!hospitalId && selectAll) {
+      showError("Super Admin không thể chọn 'Áp dụng cho tất cả' mà không có cơ sở y tế mặc định.");
       return;
     }
 
@@ -172,15 +177,10 @@ export default function SchedulesManagement() {
         delete payload.end_date;
       }
 
-      if (formData.doctor_id === "all") {
+      if (selectAll && !filterCategory && !searchDoctor) {
         payload.apply_to_all_doctors = true;
-        delete payload.doctor_id;
-      } else if (formData.doctor_id === "all_in_category") {
-        payload.apply_to_all_doctors = true;
-        payload.category_id = parseInt(filterCategory);
-        delete payload.doctor_id;
       } else {
-        payload.doctor_id = parseInt(formData.doctor_id);
+        payload.doctor_ids = selectedDoctorIds;
       }
 
       const response = await createSchedule(payload);
@@ -388,27 +388,59 @@ export default function SchedulesManagement() {
                 />
 
                 <label className="block text-sm font-medium text-slate-700 mb-1">Chọn Bác sĩ</label>
-                <select 
-                  required
-                  value={formData.doctor_id}
-                  onChange={(e) => setFormData({...formData, doctor_id: e.target.value})}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">-- Chọn bác sĩ --</option>
-                  {!filterCategory && <option value="all">-- Áp dụng cho tất cả bác sĩ --</option>}
-                  {filterCategory && <option value="all_in_category">-- Áp dụng cho toàn bộ bác sĩ trong chuyên khoa này --</option>}
+                <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto p-2 bg-slate-50">
+                  {/* Select All */}
+                  <label className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer border-b border-slate-200 mb-1">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                      checked={selectAll}
+                      onChange={(e) => {
+                        setSelectAll(e.target.checked);
+                        if (e.target.checked) {
+                          const filteredIds = doctors
+                            .filter(doc => !filterCategory || String(doc.category?.id) === String(filterCategory))
+                            .filter(doc => !searchDoctor || (doc.user?.full_name || "").toLowerCase().includes(searchDoctor.toLowerCase()))
+                            .map(doc => doc.id);
+                          setSelectedDoctorIds(filteredIds);
+                        } else {
+                          setSelectedDoctorIds([]);
+                        }
+                      }}
+                    />
+                    <span className="font-semibold text-blue-700">Chọn tất cả trong danh sách lọc</span>
+                  </label>
+
                   {doctors
                     .filter(doc => !filterCategory || String(doc.category?.id) === String(filterCategory))
                     .filter(doc => !searchDoctor || (doc.user?.full_name || "").toLowerCase().includes(searchDoctor.toLowerCase()))
                     .map(doc => (
-                    <option key={doc.id} value={doc.id}>
-                      BS. {doc.user?.full_name || `ID: ${doc.id}`} - {doc.specialty}
-                    </option>
+                    <label key={doc.id} className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                        checked={selectedDoctorIds.includes(doc.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedDoctorIds(prev => [...prev, doc.id]);
+                          } else {
+                            setSelectedDoctorIds(prev => prev.filter(id => id !== doc.id));
+                            setSelectAll(false);
+                          }
+                        }}
+                      />
+                      <span className="text-slate-700 text-sm">
+                        BS. {doc.user?.full_name || `ID: ${doc.id}`} - {doc.specialty}
+                      </span>
+                    </label>
                   ))}
-                </select>
+                  {doctors.filter(doc => !filterCategory || String(doc.category?.id) === String(filterCategory)).filter(doc => !searchDoctor || (doc.user?.full_name || "").toLowerCase().includes(searchDoctor.toLowerCase())).length === 0 && (
+                    <div className="p-3 text-center text-slate-500 text-sm">Không tìm thấy bác sĩ nào</div>
+                  )}
+                </div>
               </div>
 
-              {formData.doctor_id && formData.doctor_id !== "all" && rooms.length > 0 && (
+              {selectedDoctorIds.length > 0 && rooms.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Chọn Phòng Khám</label>
                   <select 
@@ -416,7 +448,7 @@ export default function SchedulesManagement() {
                     onChange={(e) => setFormData({...formData, room_id: e.target.value})}
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   >
-                    <option value="">-- Có thể chọn hoặc để trống --</option>
+                    <option value="">-- Dùng chung phòng cho các bác sĩ đã chọn (tùy chọn) --</option>
                     {rooms.map(room => (
                       <option key={room.id} value={room.id}>
                         {room.name} {room.category?.name ? `(${room.category.name})` : ''}
