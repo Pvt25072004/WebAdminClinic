@@ -67,7 +67,7 @@ export default function ReviewManagement() {
     reviews.forEach(r => {
       let key = "Khác";
       if (isHospitalAdmin) {
-        key = r.doctor?.user?.full_name || `Bác sĩ #${r.doctor_id}`;
+        key = r.doctor?.user?.full_name || r.doctor?.name || `Bác sĩ #${r.doctor_id}`;
       } else {
         key = r.doctor?.hospitals?.[0]?.name || `Bệnh viện (N/A)`;
       }
@@ -238,7 +238,7 @@ export default function ReviewManagement() {
                       <td className="px-6 py-4">
                         <div className="text-slate-600">
                           {isHospitalAdmin 
-                            ? r.doctor?.user?.full_name 
+                            ? (r.doctor?.user?.full_name || r.doctor?.name || `Bác sĩ #${r.doctor_id}`)
                             : r.doctor?.hospitals?.[0]?.name || "N/A"}
                         </div>
                       </td>
