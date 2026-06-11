@@ -5,6 +5,7 @@ import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { getAllServicePackages, createServicePackage, updateServicePackage, deleteServicePackage } from "../services/admin.servicepackages.api";
 import { getHospitals } from "../services/admin.hospitals.api";
+import { getCategories } from "../services/admin.categories.api";
 import { useNotification } from "../contexts/NotificationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { uploadUserImage } from "../services/api";
@@ -15,6 +16,7 @@ export default function ServicePackageManagement() {
   const { user } = useAuth();
   const [packages, setPackages] = useState([]);
   const [hospitalsList, setHospitalsList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
   const [loading, setLoading] = useState(false);
   
   const [showForm, setShowForm] = useState(false);
@@ -30,6 +32,7 @@ export default function ServicePackageManagement() {
     requires_fasting: false,
     image_url: "",
     hospital_ids: user?.hospital_id ? [user.hospital_id] : [],
+    category_ids: [],
   });
 
   const fileInputRef = useRef(null);
@@ -59,9 +62,10 @@ export default function ServicePackageManagement() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [data, hospitalsData] = await Promise.all([
+      const [data, hospitalsData, categoriesData] = await Promise.all([
         getAllServicePackages(user?.hospital_id),
-        getHospitals()
+        getHospitals(),
+        getCategories(user?.hospital_id)
       ]);
       
       setPackages(Array.isArray(data) ? data : []);
@@ -71,6 +75,9 @@ export default function ServicePackageManagement() {
         finalHospitalsList = finalHospitalsList.filter(h => h.id === user.hospital_id);
       }
       setHospitalsList(finalHospitalsList);
+
+      let finalCategoriesList = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
+      setCategoriesList(finalCategoriesList);
     } catch (e) {
       console.error("Load service packages error:", e);
       showError("Không thể tải danh sách gói khám");
@@ -94,6 +101,7 @@ export default function ServicePackageManagement() {
       requires_fasting: false,
       image_url: "",
       hospital_ids: user?.hospital_id ? [user.hospital_id] : [],
+      category_ids: [],
     });
     setShowForm(true);
   };
@@ -110,6 +118,7 @@ export default function ServicePackageManagement() {
       requires_fasting: pkg.requires_fasting ?? false,
       image_url: pkg.image_url || "",
       hospital_ids: pkg.hospitals?.map(h => h.id) || [],
+      category_ids: pkg.categories?.map(c => c.id) || [],
     });
     setShowForm(true);
   };
@@ -152,6 +161,7 @@ export default function ServicePackageManagement() {
         fixed_price: Number(formData.fixed_price),
         duration_minutes: Number(formData.duration_minutes),
         hospitals: formData.hospital_ids.map(id => ({ id })),
+        categories: formData.category_ids.map(id => ({ id })),
       };
       
       if (formData.id) {
@@ -375,6 +385,35 @@ export default function ServicePackageManagement() {
                   );
                 })}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Chuyên khoa khám</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-slate-50 max-h-48 overflow-y-auto">
+                {categoriesList.map((cat) => {
+                  const isChecked = formData.category_ids.includes(cat.id);
+                  return (
+                  <label key={cat.id} className="flex items-center gap-2 cursor-pointer bg-white p-2 rounded border border-slate-200 hover:border-blue-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        const { checked } = e.target;
+                        setFormData(prev => ({
+                          ...prev,
+                          category_ids: checked 
+                            ? [...prev.category_ids, cat.id] 
+                            : prev.category_ids.filter(id => id !== cat.id)
+                        }));
+                      }}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium text-slate-700 line-clamp-1" title={cat.name}>{cat.name}</span>
+                  </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Hệ thống sẽ dùng chuyên khoa này để lọc danh sách bác sĩ khi bệnh nhân đặt lịch.</p>
             </div>
 
             <div>

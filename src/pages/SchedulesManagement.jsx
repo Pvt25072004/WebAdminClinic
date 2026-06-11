@@ -500,6 +500,7 @@ export default function SchedulesManagement() {
         end: endDate,
         resource: {
           doctor: docName,
+          category: sch.doctor?.category?.name || 'Không có chuyên khoa',
           hospital: hospName,
           room: sch.room?.name || 'Chưa xếp phòng',
           max: sch.max_patients,
@@ -748,9 +749,16 @@ export default function SchedulesManagement() {
                 
                 {/* Lọc lịch thông minh */}
                 {selectedDoctorIds.length > 1 || selectAll ? (
-                  <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex items-start gap-2 text-emerald-800 text-sm">
-                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                    <span>Tính năng Gợi ý Giờ Trống không khả dụng khi lên lịch cho nhiều bác sĩ cùng lúc.</span>
+                  <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex flex-col gap-2 text-amber-800 text-sm">
+                    <div className="flex items-start gap-2 font-semibold">
+                      <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                      <span>Chế độ Lên lịch Hàng loạt</span>
+                    </div>
+                    <p className="ml-7">
+                      Tính năng Gợi ý Giờ Trống theo phòng bị vô hiệu hóa khi lên lịch cho nhiều bác sĩ cùng lúc. 
+                      Hệ thống sẽ tự động quét các phòng còn trống (theo đúng chuyên khoa) và <strong>gắn ngẫu nhiên</strong> vào phòng trống. 
+                      Bạn vui lòng chọn ngày và giờ ở bên dưới. Admin có thể chỉnh sửa lại phòng sau nếu muốn.
+                    </p>
                   </div>
                 ) : (
                   <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
@@ -832,13 +840,7 @@ export default function SchedulesManagement() {
                     </div>
                   )}
 
-                  {(selectedDoctorIds.length > 1 || selectAll) && (
-                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2 text-sm text-amber-800">
-                      <span className="font-semibold flex items-center gap-1"><AlertCircle className="w-4 h-4"/> Lưu ý:</span> Bạn đang lên lịch cho nhiều bác sĩ cùng lúc. Phân bổ phòng khám tạm thời được để trống để tránh trùng phòng. Admin có thể xếp phòng chi tiết sau.
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 mt-2">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Từ ngày</label>
                       <input 
@@ -849,9 +851,7 @@ export default function SchedulesManagement() {
                           setFormData({...formData, work_date: e.target.value});
                           setSmartSuggestions(null);
                         }}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50 text-slate-500"
-                        title="Thay đổi ngày ở phần Gợi ý phía trên"
-                        readOnly // Đã có ở trên nên chỉ hiện thị
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white text-slate-900"
                       />
                     </div>
                     <div>
@@ -950,6 +950,7 @@ export default function SchedulesManagement() {
                         <span className="font-medium">Bác sĩ phụ trách</span>
                       </div>
                       <p className="text-slate-700 font-semibold">{selectedEvent.resource.doctor}</p>
+                      <p className="text-sm text-slate-500 mt-0.5">{selectedEvent.resource.category}</p>
                     </div>
                     <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
                       <div className="flex items-center gap-2 text-emerald-800 mb-1">
@@ -1209,7 +1210,7 @@ export default function SchedulesManagement() {
                             <Clock className="w-3.5 h-3.5" /> 
                             {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
                             <span className="text-slate-300">|</span>
-                            <span>{event.resource.hospital}</span>
+                            <span>{event.resource.hospital} - {event.resource.category}</span>
                           </div>
                         </div>
                       </div>
