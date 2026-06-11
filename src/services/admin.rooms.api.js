@@ -32,3 +32,26 @@ export const getRooms = async (hospital_id = null, category_id = null) => {
         throw error;
     }
 };
+
+/**
+ * Bulk create rooms
+ * @param {Array} rooms Array of room objects { name, hospital_id, category_id }
+ * @returns {Promise<Array>} Created rooms
+ */
+export const createBulkRooms = async (rooms) => {
+    try {
+        const response = await fetch(`${ROOMS_ENDPOINT}/bulk`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeaders(),
+            },
+            credentials: "include",
+            body: JSON.stringify(rooms),
+        });
+        return await handleResponse(response, "Không thể tạo phòng khám hàng loạt");
+    } catch (error) {
+        console.error('Error creating bulk rooms:', error);
+        throw error;
+    }
+};

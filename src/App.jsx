@@ -23,6 +23,7 @@ const ServicePackageManagement = lazy(
   () => import("./pages/ServicePackageManagement"),
 );
 const SchedulesManagement = lazy(() => import("./pages/SchedulesManagement"));
+const RoomManagement = lazy(() => import("./pages/RoomManagement"));
 const NotificationManagement = lazy(
   () => import("./pages/NotificationManagement"),
 );
@@ -204,6 +205,7 @@ const AppRouter = () => {
           element={<ServicePackageManagement />}
         />
         <Route path="/schedules" element={<SchedulesManagement />} />
+        <Route path="/rooms" element={<RoomManagement />} />
         <Route path="/notifications" element={<NotificationManagement />} />
         <Route path="/appointment" element={<AppointmentManagement />} />
         <Route path="/payment" element={<PaymentManagement />} />
