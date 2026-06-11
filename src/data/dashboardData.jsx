@@ -22,7 +22,6 @@ export const adminNavItems = [
   { label: "Hospital Regs", Icon: FaRegFileImage, active: false, url: "/hospital-registrations" },
   { label: "Categories", Icon: FaRegListAlt, active: false, url: "/category" },
   { label: "Banners", Icon: FaRegFileImage, active: false, url: "/banner" },
-  { label: "Rooms", Icon: FaBuilding, active: false, url: "/rooms" },
   { label: "Appointments", Icon: FaRegCalendarAlt, active: false, url: "/appointment" },
   { label: "News", Icon: FaRegNewspaper, active: false, url: "/news" },
   { label: "Payments", Icon: FaWallet, active: false, url: "/payment" },
